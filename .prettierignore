@@ -1,0 +1,8 @@
+node_modules/
+.next/
+dist/
+coverage/
+.tuteur/runtime/
+packages/app/next-env.d.ts
+*.tsbuildinfo
+*.log

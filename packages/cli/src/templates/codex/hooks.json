@@ -1,0 +1,5 @@
+{
+  "hooks": {
+    "sessionStart": ".codex/hooks/session-start.py"
+  }
+}

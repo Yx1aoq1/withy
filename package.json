@@ -1,0 +1,33 @@
+{
+  "name": "tuteur-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "app:dev": "pnpm --filter @tuteur/app dev",
+    "app:build": "pnpm --filter @tuteur/app build",
+    "cli": "pnpm --filter @tuteur/cli exec tsx src/index.ts",
+    "dashboard:start": "pnpm cli dashboard start",
+    "dashboard:stop": "pnpm cli dashboard stop",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix --max-warnings=0",
+    "prepare": "husky",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/node": "^20.19.0",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.9",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.6.0",
+    "husky": "9.1.7",
+    "prettier": "^3.8.4",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.61.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
