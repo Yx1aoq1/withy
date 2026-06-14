@@ -85,7 +85,7 @@ web 表单与 CLI 交互**同源**:都读 `INIT_QUESTIONS`、产出同一个 `In
   /p/tasks         任务看板(按 status 分组)+ My/All + 卡住告警(重试超阈值标黄)+ 已归档筛选(completed/cancelled)
   /p/tasks/<id>    详情:phase 进度、artifact、归档按钮(未完成任务可标 cancelled)
     ├ 事件时间线(events.jsonl):验收尝试/跳步/跳过 + planned vs injected 注入对比 ← 发现 hook 失效的关键视图
-    ├ approval 面板(UI 写,CLI 读)
+    ├ approval 面板(展示 + 可选补批;CLI/agent 经 `ttur approve` 亦可写,§6)
     └ artifact 查看(md 渲染 / json 表格)
   /p/knowledge     知识库管理(全局+项目两区:条目 CRUD/tag/frontmatter + md 正文渲染 + 图谱视图[全局/项目/合并],knowledge.md §10)
   /p/context       注入编排器:按 default/node 勾选注入哪些知识 id、标必读/可选/禁用、实时预览注入块
@@ -114,19 +114,22 @@ web 表单与 CLI 交互**同源**:都读 `INIT_QUESTIONS`、产出同一个 `In
 
 ### 3.3 workflow 画布编辑器
 
-画布只有两种节点(core §4.3),布局简化:**skill 节点单出(入度不限)、decision 节点单入多出**,连线由节点 `next`/`branches` 直接推导,**无需 n8n 那样的自由连线引擎**。
+画布 = **三个固定阶段容器**(规划 / 执行 / 收尾,不可增删)+ 容器内/容器前的两类节点(core §4.3)。技术选型 **React Flow(`@xyflow/react`)的 Sub Flow**(`parentId` + `extent:'parent'`):三个容器是预置的父节点(不可删/改名),把 skill 拖进框即归属该阶段;连线由 `next`/`branches` 推导,**无需 n8n 那样的自由连线引擎**。
 
 ```text
-[classify] →<route?>─ small ─→[dev]→[check]→[finish]
-                    └─ else ──→[grill-me]─┘
+            ┌─ 规划 ───────┐   ┌─ 执行 ──────┐   ┌─ 收尾 ─┐
+<triage?>─standard─→│ brainstorm→grill-me │→│ dev → check │→│ wrapup │
+        ├─small ───────────────────────────→┘(跳过规划)       │
+        └─research ───────────────────────────────────────────→┘
 ```
 
-- **skill 节点**:选 `skillRef`(下拉来自 `discoverSkills`,按 `agent`/`source` tag 分组,core §5.1)、配 requiredArtifacts/checks/approval。
-- **decision 节点**:配 `signal`(确定性 / classify 产物 / 人工)+ `branches`(when→目标节点);必须含一个 default 分支。
-- 编辑后 `PUT /api/workflows/:id`,经 core 校验(节点连通、无环、skillRef 可解析、skill 单出、decision 含 default)。
-- 运行态在画布高亮 `currentNode`、已完成节点、decision 实际路由(读 `state.decisions`)。
+- **skill 节点**:选 `skill`(下拉来自 `discoverSkills`,**按逻辑名去重**、按 `agent`/`source` tag 分组,core §5.1)、配可选 `gate`(artifacts/checks/approval)。
+- **switch 节点**:配各 `branches`(`label` + `criteria` 判断说明 + `next` 目标节点);必须含一个 `default`。**靠 agent 判断**,无布尔表达式(core §4.3、harness §2.5)。
+- 框自带进/出口端点(纯视觉);跨框只 `end→下一框 entry`;每框声明一个 `entry` 入口节点。
+- 编辑后 `PUT /api/workflows/:id`,经 core 校验(连通、无环、阶段单调不倒退、switch 含 default、skill 可解析;第三方仅某工具有则警告)。
+- 运行态高亮 `currentNode`、已完成节点、switch 实际判定(读 `state.decisions`,展示"判定 small,因为:…")。
 
-MVP(你的选择):可编辑,但只这两种节点 + skill 单出,逻辑远比 n8n 简单。
+MVP(你的选择):可编辑,三个固定容器 + skill/switch 两种节点,逻辑远比 n8n 简单。
 
 ---
 
@@ -152,7 +155,7 @@ MVP(你的选择):可编辑,但只这两种节点 + skill 单出,逻辑远比 n8
 | `GET\|PUT\|POST\|DELETE /api/knowledge/:id?scope&project` | 知识条目读写/增删;读返回 `{ format, raw, frontmatter }`(`format` 缺省 `md`,前端按 format 选渲染器) | 知识库管理 + md 渲染;agent 也可直接改文件(knowledge.md §9/§10) |
 | `GET /api/knowledge/graph?scope&project&merged` | 文档关系图(节点/边),`merged=1` 出全局+项目全景 | `/p/knowledge` 图谱视图;调 `ttur knowledge graph`(knowledge.md §9) |
 | `GET /api/context/preview?project&node` | 预览本配置下拼出的注入块(resolvePlannedContext) | 注入编排器实时预览 |
-| `GET\|PUT /api/workflows/:id?project` | workflow 节点图读写 | core 校验(连通/无环/skillRef/decision default) |
+| `GET\|PUT /api/workflows/:id?project` | workflow 节点图读写 | core 校验(连通/无环/阶段单调/switch default/skill 可解析) |
 | `GET /api/skills?project` | skill 发现(discoverSkills) | 带 agent/source tag,画布下拉用 |
 | `GET /api/events?project` | 实时事件(SSE 长连接) | 推 `task-updated` 等(§4.2) |
 
@@ -205,16 +208,17 @@ dashboard server:chokidar.watch(<当前项目>/.tuteur/{tasks,workflows,context.
 
 ## 6. Approval 机制
 
-PRD:approval 由 UI 完成,CLI 只读。
+approval 写入口有两个**等价**通道:web 点确认、或 `ttur approve <node>`(agent/人均可跑,harness §2.6)。**不再要求必须经 web**——单人交互下 agent 替你跑 `ttur approve` 即可;web 是可选的展示 + 另一写入口。
 
 ```text
-UI 勾选 → POST /api/tasks/:id/approvals/:node?project
-       → core.writeApproval(scope,id,node,by)  写 approvals.json { "<node>":{approvedAt,by} }
+web 点确认 → POST /api/tasks/:id/approvals/:node?project
+ttur approve <node>  ─┐
+                      ├→ core.approveNode(scope,id,node,by)  写 state.approvals[node]={approvedAt,by} + approval 事件
 ttur complete / complete 端点
-       → core.isApproved() 读 approvals.json → 未确认则门禁失败(exit 2 / 422)
+                      → core.isApproved() 读 state.approvals → 未确认则门禁失败(exit 2 / 422)
 ```
 
-独立 `approvals.json`(不与 state.json 同文件),避免「UI 写 approval」与「CLI 写 state」抢同一文件。`by` 取 `.developer.slug`。
+要点:approval 并入 `state.json` 的 `approvals` 字段(不单独存 `approvals.json`,core §4.2);`by` 取 `.developer.slug`;rewind 会连带清掉被退回节点的批准;不轮询、不超时、无过期逻辑(批了一直有效,展示批准时间戳供人察觉)。**注意**:允许 agent 写 approval 等于把它降为"停下+留痕的软约定"(harness §2.6),web 面板主要用于事后审计与人工补批。
 
 ---
 
@@ -252,13 +256,13 @@ Tailwind 4,浅色主题(背景 `#f7f7f4`,强调绿 `#27513a`),响应式 `max-[64
 | W3 | 任务看板 + 详情(`/p/tasks`、`/p/tasks/:id`) | P0 | task/state 落地 |
 | W4 | 事件时间线页 + 注入对比(events.jsonl) | P1 | core §4.4(harness H5) |
 | W5 | 全局配置页(`/settings`、`/api/global/config`) | P1 | core §2.1 |
-| W6 | approval 面板 + approvals.json | P1 | harness H10 |
+| W6 | approval 面板(展示 + 补批;`ttur approve` 等价写入口,读写 `state.approvals`) | P1 | harness §2.6/H11 |
 | W7 | 注入编排器页(`/p/context`,default/node 两层 + 实时预览)+ `GET\|PUT /api/context`、`/api/context/preview` | P1 | harness §4、knowledge.md §7 |
 | W7b | 知识库管理页(`/p/knowledge`,全局+项目两区 CRUD/tag + md 正文渲染)+ `/api/knowledge`、`/api/knowledge/:id` | P1 | knowledge.md §10 |
 | W7c | 知识库图谱视图(全局/项目/合并三档)+ `GET /api/knowledge/graph` + `ttur knowledge graph` | P2 | knowledge.md §9 |
 | W8 | complete 按钮 → 复用 core,422 映射 | P1 | harness H3 |
 | W9 | standalone server | P1 | §7 |
-| W10 | workflow 画布编辑(skill/decision 节点)+ `GET\|PUT /api/workflows` | P1 | core §4.3、§3.3 |
+| W10 | workflow 画布编辑(三固定容器 + skill/switch 节点,React Flow Sub Flow)+ `GET\|PUT /api/workflows` | P1 | core §4.3、§3.3 |
 | W11 | skill 选择器 + `GET /api/skills`(discoverSkills,带 tag) | P1 | core §5.1 |
 | W12 | 归档筛选/按钮(`POST /api/tasks/:id/archive`) | P1 | core §9 |
 | W13 | 实时更新:chokidar watch + SSE(`/api/events`) | P1 | §4.2 |

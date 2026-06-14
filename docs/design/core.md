@@ -3,13 +3,13 @@
 > 定位:实施规格级。`@tuteur/core` 是**唯一**的 `.tuteur/` 读写层、领域逻辑层与类型/校验事实源。CLI、app、hook 全经它访问数据。
 > 本文是 [cli.md](./cli.md)、[harness.md](./harness.md)、[web.md](./web.md) 的共同底座 —— 双层数据格式、用户模型、InitConfig、归档、数据契约都在此定义。
 > 参考实现:Trellis(`mindfold-ai/Trellis`)的注册表+configurator+shared 三层、归档移目录、身份文件 gitignore 等做法。**关键分歧**:Trellis 不做全局且禁止在 home 运行;我们要做全局,故对全局安装设了安全边界(§2.3)。
-> 状态:**整包未实现**,本文为推荐设计。
+> 状态:**P0 已落地**(types/paths/store/domain/context/skills/hook/utils/agents 已实现并接入 CLI;全局 scope、InitConfig、discoverSkills 富化、worktree 等仍为推荐设计)。逐项见 [INDEX §3 实现状态矩阵](./INDEX.md#3-实现状态矩阵)。
 
 ---
 
 ## 1. 为什么要这个包
 
-现状三处各读各的 `.tuteur/`(cli installation、app summary.ts、py hook),且 app 抄常量,必然漂移。`@tuteur/core` 收口为唯一逻辑层:
+最初三处各读各的 `.tuteur/`(cli installation、app summary.ts、旧 py hook),且 app 抄常量,必然漂移。`@tuteur/core` 已收口为唯一逻辑层(CLI 已全量接入;app 接入待办,见 INDEX §3):
 
 ```
         ┌────────────────────────────┐
@@ -60,9 +60,8 @@
 | `workflows/*.workflow.json` | JSON | 共享 | workflow 定义(门禁依据) | harness 门禁;web workflow 页 |
 | `knowledge/` | 目录 | 共享 | 项目知识库(`sources/`+`wiki/`+`index.md`+`log.md`,karpathy 模式;条目 schema 见 [knowledge.md](./knowledge.md)) | hook 注入(注索引);web 知识库管理 |
 | `tasks/<id>/task.json` | JSON | 共享 | 任务元数据 | web 看板/详情;CLI/门禁 |
-| `tasks/<id>/state.json` | JSON | 共享 | workflow 进度游标 | web 进度;门禁推进 |
-| `tasks/<id>/approvals.json` | JSON | 共享 | 人工确认记录 | web 写;门禁读 |
-| `tasks/<id>/<artifact>` | MD/JSON | 共享 | agent 产物(prd.md 等,**按需**) | web artifact 查看;门禁 requiredArtifacts |
+| `tasks/<id>/state.json` | JSON | 共享 | workflow 进度游标(currentNode/completedNodes/decisions/**approvals**) | web 进度;门禁推进 |
+| `tasks/<id>/<artifact>` | MD/JSON | 共享 | agent 产物(design.md 等,**按需**) | web artifact 查看;门禁 `gate.artifacts` |
 | `tasks/<id>/events.jsonl` | JSONL | 共享 | 事件流水:验收尝试/会话注入/跳过(§4.4) | web 事件时间线与统计;CLI/hook 追加 |
 | `tasks/archive/<YYYY-MM>/<id>/` | 目录 | 共享 | 归档任务(整目录迁入,按归档月分桶,§9) | web 归档视图 |
 | `template-hashes.json` | JSON | 共享 | skill 模板哈希(update 用) | CLI update |
@@ -168,85 +167,130 @@ workflow 定义是静态的,state 是动态游标,由门禁维护:
 ```jsonc
 {
   "taskId": "06-12-add-auth",
-  "currentNode": "grill-me",          // 当前待完成的 skill 节点;null=workflow 完成
-  "completedNodes": ["classify", "route"],   // 含已自动求值的 decision 节点
-  "decisions": { "route": "large" },         // 每个 decision 的路由结果(可审计/web 展示)
+  "currentNode": "grill-me",          // 当前待完成的节点(skill 或 switch);null=workflow 完成
+  "completedNodes": ["triage", "brainstorm"],   // 已完成的节点(switch 也由 agent 完成,计入)
+  "decisions": {                              // 每个 switch 的判定结果(可审计/web 展示)
+    "triage": { "branch": "small", "reason": "只加一个按钮", "by": "yan", "at": "2026-06-12T10:20:00.000Z" }
+  },
+  "approvals": {                              // 人工确认记录(gate.approval 的门禁输入),按节点 id
+    "grill-me": { "approvedAt": "2026-06-12T10:25:00.000Z", "by": "yan" }
+  },
   "updatedAt": "2026-06-12T10:30:00.000Z"
 }
 ```
 
-phase 不再是结构层,只是节点的展示标签(§4.3);`task.status` 由 `currentNode` 所在 phase 标签驱动(planning 标签→planning;execute/finish→in_progress;`currentNode==null`→completed);**无 phase 标签的节点不改变 status**(任务初始为 planning,仅进入带标签节点时更新)。门禁失败不改变 state——停留原节点修复后再次 complete 即返工(harness §2.4);workflow 校验拒绝带环图,state 无迭代轮次概念。web 进度只读 `currentNode/completedNodes/decisions`。
+phase 不进 state,**纯派生**:节点的阶段归属是它在 workflow 里的容器(planning/execute/finish 三个固定框,§4.3),core 导出 `phaseOf(wf, nodeId)` 查容器成员;hook/complete/task 三处共用此函数,不各算各的。`task.status` 由 `phaseOf(currentNode)` 驱动(planning 框→planning;execute/finish 框→in_progress;`currentNode==null`→completed;阶段框之前的分诊节点不改 status,保持初始 planning)。门禁失败不改变 state——停留原节点修复后再次 complete 即返工(harness §2.4);switch 判错用 `ttur rewind` 退回(harness §3.1),并连带清掉被退回节点及其下游的 `approvals`。**approval 并入 state(不单独存 `approvals.json`)**:它是门禁输入,和 `decisions` 一样属当前权威态;`ttur approve` 写 `state.approvals` 并追加一条 `approval` 审计事件(§4.4)。workflow 校验拒绝带环图,state 无迭代轮次概念。
 
-### 4.3 workflow.json(节点图)
+### 4.3 workflow.json(节点图:固定阶段容器 + 两类节点)
 
-统一**节点图**,简化约束:只有两种节点 —— `skill`(**单出**,入度不限——分支汇合点天然多入)和 `decision`(单入多出)。图必须**无环**(返工靠停留原节点重试表达,harness §2.4,validate 拒绝回边)。出边内嵌为节点的 `next`/`branches`,**省去独立 `edges[]`**。`entry` 是入口,`next:null` 是终点。`phase` 仅作展示标签(画布泳道 + 驱动 task.status)。
+workflow 由**三个固定的阶段容器**(planning / 执行 / 收尾,不可增删,§7.3)+ 容器内/容器前的**两类节点**组成。两类节点:
+
+- **skill 节点**:引用一个 skill(指路牌)。语义=agent 走到这儿先读 `skill` 指向的 skill、按它做完,再 `ttur complete <node>` 推进。**单出**(`next`),入度不限。可选挂门禁 `gate`。
+- **switch 节点**:岔路口。**靠 agent 判断**走哪条(语义判断,表达不成布尔式),每条分支自带 `criteria` 判断说明。agent 走到 switch **停下**,判定后 `ttur complete <node> --branch <label> --reason "..."`;系统记 `state.decisions` 并路由(harness §2.5/§3)。必须有且仅有一个 `default` 兜底分支。
+
+图必须**无环**(返工=停留原节点重试,harness §2.4;switch 判错用 `ttur rewind` 退回,harness §3.1;validate 拒绝回边)。出边内嵌为 `next`/`branches`,省去独立 `edges[]`。`entry` 是全局入口(可以是阶段框之前的分诊节点);`next:null` 是终点。每个节点的阶段归属由它所在容器决定(画布上拖进哪个框);`phase:null` = 阶段框之前的分诊区。
 
 ```jsonc
 {
-  "id": "default", "name": "Default Coding Workflow", "version": "0.2.0",
-  "entry": "classify",
+  "id": "default", "name": "Default Coding Workflow", "version": "0.3.0",
+  "entry": "triage",
+  "phases": [                                  // 固定有序骨架:驱动 task.status + web 进度条/画布三框
+    { "id": "planning", "label": "规划", "entry": "brainstorm" },   // entry=从框外进入该阶段的唯一落点(单入校验)
+    { "id": "execute",  "label": "执行", "entry": "dev" },
+    { "id": "finish",   "label": "收尾", "entry": "wrapup" }
+  ],
   "nodes": [
-    { "id":"classify", "type":"skill", "skillRef":"classify", "next":"route",
-      "requiredArtifacts":["decision.json"] },              // 轻量分类,产出信号
-    { "id":"route", "type":"decision", "signal":"decision.json#/size",
-      "branches":[ {"when":"small","next":"dev"}, {"default":true,"next":"grill-me"} ] },
-    { "id":"grill-me", "type":"skill", "skillRef":"grill-me", "next":"dev", "phase":"planning",
-      "requiredArtifacts":["design.md","checklist.json"], "approvalRequired":true },
-    { "id":"dev", "type":"skill", "skillRef":"dev", "next":"check", "phase":"execute" },
-    { "id":"check", "type":"skill", "skillRef":"check", "next":"finish", "phase":"execute",
-      "requiredArtifacts":["check-result.json"],
-      "checks":[{ "id":"tests","type":"command","command":"npm test" }] },
-    { "id":"finish", "type":"skill", "skillRef":"finish", "next":null, "phase":"finish" }
+    // 分诊区(phase:null,画在三框左侧)
+    { "id":"triage", "type":"switch",
+      "branches":[
+        { "label":"standard", "criteria":"常规需求,需要完整规划再开发", "default":true, "next":"brainstorm" },
+        { "label":"small",    "criteria":"改动小、风险低,可跳过规划直接开发", "next":"dev" },
+        { "label":"research", "criteria":"只需调研、产出结论,不写生产代码", "next":"wrapup" }
+      ] },
+    // planning 框
+    { "id":"brainstorm", "type":"skill", "skill":"brainstorm", "phase":"planning", "next":"grill-me" },
+    { "id":"grill-me",   "type":"skill", "skill":"grill-me",   "phase":"planning", "next":"dev",
+      "gate": { "artifacts":["design.md"], "approval":true } },
+    // execute 框
+    { "id":"dev",   "type":"skill", "skill":"dev",   "phase":"execute", "next":"check" },
+    { "id":"check", "type":"skill", "skill":"check", "phase":"execute", "next":"wrapup",
+      "gate": { "checks":["npm test"] } },
+    // finish 框
+    { "id":"wrapup", "type":"skill", "skill":"finish", "phase":"finish", "next":null }
   ]
 }
 ```
 
 | 节点字段 | 适用 | 语义 |
 | --- | --- | --- |
-| `type` | 全部 | `skill` \| `decision` |
-| `skillRef` | skill | 引用的 skill(§5 发现/校验) |
+| `type` | 全部 | `skill` \| `switch` |
+| `skill` | skill | 引用的 skill 名(§5 发现/解析;只存名,不存路径/来源) |
 | `next` | skill | 唯一后继 id;`null`=终点 |
-| `branches` | decision | `[{when:值,next} \| {default:true,next}]`,多后继;**必须有且仅有一个 default**(validate 强制) |
-| `signal` | decision | 取值表达式:`decision.json#/size`(JSON Pointer)/ `task.priority` / `check:<id>` |
-| `requiredArtifacts`/`checks`/`approvalRequired` | skill | 门禁条件,**全可选**(产物按需,§7) |
-| `phase` | skill | 展示标签:泳道分组 + 驱动 task.status(无标签节点不改 status) |
+| `branches` | switch | `[{label, criteria, next} \| {label, criteria, default:true, next}]`;**必须有且仅有一个 default**(validate 强制) |
+| `criteria` | switch 分支 | 该分支的判断说明(给 agent 看,据此选路) |
+| `gate` | skill | **可选**门禁:`{ artifacts?: string[], checks?: string[], approval?: boolean }`(§4.3.1);大多数节点不写 |
+| `phase` | 全部 | 阶段归属(=画布上所在容器);`null`=分诊区,不改 task.status |
 
-**decision 节点不占 agent step**:harness 在前驱 skill 完成后**自动求值** signal 并选边,对 agent 透明(推进逻辑见 harness §3,signal 三类来源见 harness §2.5)。signal 不可读(文件/字段缺失)→ 本次 complete 整体失败(exit 2,提示信号缺失);有值但未匹配任何 `when` → 走 default 分支。一个 workflow 含多个 decision 时,信号产物按 `decisions/<nodeId>.json` 命名避免冲突(§4.6)。web 画布只渲染这两种节点、按 `next`/`branches` 画连线(web §3.3)。
+**switch 不再自动求值、不再读 signal**:harness 走到 switch **停下**,把各分支 `criteria` 输出给 agent,agent 判定后用 `ttur complete <node> --branch <label> --reason` 报出;非法分支/缺 `--branch` → 门禁失败(exit 2)停下重判;判定记 `state.decisions[node]={branch,reason,by,at}` + 一条事件(§4.4)。一个 workflow 含多个 switch 互不影响(各记各的 nodeId)。原 `decision`/`signal`/`decision.json#/...`(JSON Pointer)/"三类信号源"模型**已废弃**(harness §2.5)。
+
+#### 4.3.1 门禁 `gate`(可选,确定性核对)
+
+```jsonc
+"gate": {
+  "artifacts": ["design.md"],   // 这些文件要在、且非空(只核存在性,不校内容)
+  "checks":    ["npm test"],    // 这些命令要退出 0(直接写命令字符串)
+  "approval":  true             // 需 ttur approve <node>(记入 state.approvals)
+}
+```
+
+三项全可选,没 `gate` 的节点做完直接 complete。**产物只核"存在 + 非空"(L1)**——挡住忘产出/空文件,确定性、便宜、不误判;**内容对不对不由门禁判**(避免引入模型不确定性/schema 引擎),交给 `approval`(人看)或 `checks`(校验命令)。
+
+#### 4.3.2 节点类型内置描述(core 常量,不写进 workflow.json)
+
+每种 `type` 对应一份固定 `desc`,渲染 workflow 给 agent 读时附上,告诉它"这类节点数据干嘛用":
+
+```ts
+const NODE_TYPE_DESC = {
+  skill:  "技能节点 —— 进入后先读 skill 指向的指引,按它完成本步,门禁齐全后 `ttur complete <node>` 推进。",
+  switch: "判断节点 —— 对照各分支 criteria 判断当前任务命中哪条,执行 `ttur complete <node> --branch <label> --reason \"...\"`;default 兜底。",
+};
+```
 
 ### 4.4 events.jsonl(事件流水,审计与统计数据源)
 
-run 模式已移除(交互模式唯一,Tuteur 不启动/托管 agent 进程),`events.jsonl` 是执行过程的唯一记录:按时间追加、一行一条紧凑 JSON(reason 截断),**随任务目录提交进 git**(换环境不丢任务可视内容)。CLI(complete/skip)与 hook(session-start)写入,web 事件时间线与统计页读取。
+run 模式已移除(交互模式唯一,Tuteur 不启动/托管 agent 进程),`events.jsonl` 是执行过程的唯一记录:按时间追加(单进程顺序写,普通 `appendFile`,不上锁——不考虑同任务多窗口并发推进)、一行一条紧凑 JSON(reason 截断 ~200 字、不存大块内容/产物正文),**随任务目录提交进 git**(换环境不丢任务可视内容)。CLI(complete/decide/rewind/skip)与 hook(session-start)写入,web 事件时间线与统计页读取。
 
 ```jsonc
 {"ts":"...","type":"complete_attempt","node":"check","ok":false,"reason":"check tests failed (exit 1)"}
-{"ts":"...","type":"complete_attempt","node":"finish","ok":false,"reason":"当前应完成 check"}   // 喊错关 = 跳步证据
-{"ts":"...","type":"session_start","injected":["api-conventions","tasks/06-12-add-auth/prd.md"]}
+{"ts":"...","type":"complete_attempt","node":"check","ok":true}                                      // 成功无需 reason
+{"ts":"...","type":"complete_attempt","node":"finish","ok":false,"reason":"当前应完成 check"}        // 喊错节点 = 跳步证据
+{"ts":"...","type":"decision","node":"triage","branch":"small","reason":"只加一个按钮","by":"yan"}    // switch 判定
+{"ts":"...","type":"rewind","node":"triage","by":"yan","reason":"判错了"}                             // switch 回退(harness §3.1)
+{"ts":"...","type":"approval","node":"grill-me","by":"yan"}                                           // 人工确认(同时写 state.approvals)
+{"ts":"...","type":"session_start","injected":["api-conventions","tasks/06-12-add-auth/design.md"]}
 {"ts":"...","type":"skip","node":"check","by":"yan","reason":"flaky check,人工放行"}
 ```
 
-用途:重试告警线(同节点失败超过 `config.json` 阈值 → 看板标黄;**门禁本身永不自动放行**,harness §2.4)、跳步/遵从率统计(P2 统计页:节点失败率、平均重试、最常缺产物)、hook 生效性判断(有 `session_start` 即 hook 已触发,`injected` 与计划注入对比;事件缺失 = hook 根本未触发)。
+字段约定:`by` 只在人工动作/判定上记(取 `.developer.slug`);成功 complete 不记 reason(state 已有结果);命令输出只在失败 `reason` 里截尾,不存全量。
 
-### 4.5 context.json / approvals.json
+**state vs events(不是重复,形态/职责不同)**:`state.json` 是**当前快照**(覆盖式,只留最新游标,门禁/推进读它);`events.jsonl` 是**全程流水**(追加式,记下所有 state 里没有的东西——失败尝试、注入清单、跳过/回退的原因与时间)。仅"成功完成的节点 / switch 判定"在两者间轻微重叠(events 多带时间戳),换来完整有序时间线。两个都留:删 events 丢审计/告警/hook 生效性,删 state 则每次定位要重放日志(慢且脆)。
+
+用途:重试告警线(**从 events 派生、不进 state**:对当前节点数"自上次 ok:true 或进入该节点以来连续的 `ok:false` 次数",超过 `config.json` 阈值 → 看板标黄;一次成功 complete 或一次 rewind 清零;**门禁本身永不自动放行**,harness §2.4)、跳步/遵从率统计(P2 统计页:节点失败率、平均重试、最常缺产物)、hook 生效性判断(有 `session_start` 即 hook 已触发,`injected` 与计划注入对比;整段会话事件缺失 = hook 根本未触发)。
+
+### 4.5 context.json
 
 ```jsonc
 // context.json —— 默认注入上下文(harness §4、knowledge.md §7);按知识 id 引用,分两层(项目共享,不分用户)
 { "default": { "required":["api-conventions"], "optional":["db-schema"], "disabled":[] },
   "nodes": { "dev": { "required":["api-conventions","test-policy"] } } }      // 按节点 id 差异化
-// approvals.json —— UI 写,门禁读(§9 web §6)
-{ "grill-me": { "approvedAt":"...", "by":"yan" } }
 ```
 
+> 人工确认记录(approvals)已并入 `state.json` 的 `approvals` 字段(§4.2),不再有独立 `approvals.json`。
 > 无 `members.json`:成员名册由提交的 `workspace/<slug>/` 子目录派生(`listDevelopers`,§3),对齐 Trellis。
 
-### 4.6 decision.json(分支信号产物)
+### 4.6 分支判定记录(已并入 state.decisions,不再有 decision.json 产物)
 
-由 classify 类 skill 节点产出,harness 读它做 agent 分支路由(harness §2.5)。结构自由,workflow 的 `signal` 用 JSON Pointer 取值:
-
-```jsonc
-{ "size": "large", "kind": "dev", "needsResearch": true }
-```
-
-`route` decision 的 `signal:"decision.json#/size"` 取 `size` 值匹配 branches。它是**可见、可审计**的产物 —— web 在节点上展示「判定为 large → 走 grill-me」,用户能看到为什么走这条路。一个 workflow 含多个分类节点时,信号产物按 `decisions/<nodeId>.json` 命名(signal 路径本就可配,此为默认约定)。
+switch 的判定**不产出独立 artifact**,直接由 agent 经 `ttur complete <node> --branch <label> --reason` 报出,记入 `state.decisions[node] = { branch, reason, by, at }`(§4.2)+ 一条 `decision` 事件(§4.4)。它是**可见、可审计**的——web 在节点上展示「判定为 small → 走 dev,因为:只加一个按钮」,用户能看到为什么走这条。原 `decision.json` 产物 + `signal` JSON Pointer 取值模型**已废弃**(harness §2.5)。
 
 ---
 
@@ -262,29 +306,37 @@ readWorkflow(scope, id): Workflow;   readContextConfig(scope): ContextConfig;
 readEvents(scope, taskId): TaskEvent[];   readArtifact(scope, taskId, rel): string;
 listDevelopers(scope): Developer[];   listProjects(): ProjectRef[];   // 名册读 workspace/*/(§3);projects 全局
 readCurrentTask(scope): string | null;   // runtime/current-task.json 指针(harness §7.1)
-discoverSkills(scope): DiscoveredSkill[];   // 项目 scope 入参;内部扫项目目录 + 各 agent home 目录(§5.1)
+discoverSkills(scope): DiscoveredSkill[];   // 在 skills.ts;扫项目目录 + 各 agent home 目录(§5.1)
 // 写
 writeTask(scope, task);   writeState(scope, state);   appendEvent(scope, taskId, event);
-writeApproval(scope, taskId, node, by);   archiveTask(scope, id, { markCancelled? });   // §9
+approveNode(scope, taskId, node, by);   archiveTask(scope, id, { markCancelled? });   // §9;approval 写 state.approvals + 事件,见 harness §2.6
 writeCurrentTask(scope, taskId);   clearCurrentTask(scope);   assignTask(scope, taskId, slug);   // §3.1 改派
 upsertProject(path);   // 名册无写 API:`workspace/<slug>/` 由 init 建、随仓库提交即登记(§3)
 ```
 
 ### 5.1 Skill 发现(跨 agent + 项目/全局,带 tag)
 
-workflow 编排 skill,需要列出本地都有哪些 skill。注意:**全局 skill 不在 `~/.tuteur/`**(§2.3 安全边界:全局根永远不放 agent 目录),而在各 agent 自己的 home 目录(`~/.claude/skills/` 等)。这是 **core 的读能力**(消费方是 web 画布的 skillRef 下拉,不暴露成 `ttur` 命令),按注册表 `skillDirs` 静态目录扫描,每条带来源 tag:
+workflow 编排 skill,需要列出本地都有哪些 skill。注意:**全局 skill 不在 `~/.tuteur/`**(§2.3 安全边界:全局根永远不放 agent 目录),而在各 agent 自己的 home 目录(`~/.claude/skills/` 等)。这是 **core 的读能力**(消费方是 web 画布的 skill 下拉,不暴露成 `ttur` 命令),按注册表 `skillDirs` 静态目录扫描,每条带来源 tag:
 
 ```ts
+// 已实现(基础版):按逻辑名去重,合并多处安装位置到 paths[]
 export interface DiscoveredSkill {
-  name: string; description?: string;          // 解析 SKILL.md frontmatter
-  agent: 'canonical' | 'codex' | 'claude' | 'gemini';
-  source: 'project' | 'global';                // ← tag:项目目录 vs agent 的 home 目录
-  path: string;
+  name: string; // 逻辑名(剥 tuteur- 前缀)
+  description?: string; // 解析 SKILL.md frontmatter 的 description
+  source: 'project' | 'global'; // 项目目录 vs agent 的 home 目录
+  paths: string[]; // 该逻辑 skill 被发现的所有目录(同一 skill 可装在多个工具)
 }
-export function discoverSkills(scope: Scope): DiscoveredSkill[];   // 项目 scope;内部扫 project 组 + home 组
+export function discoverSkills(scope: Scope): DiscoveredSkill[]; // 项目 scope;扫 project 组 + home 组
+export function resolveSkillRef(scope: Scope, skill: string): { name: string; path: string }; // 解析不到则抛错
 ```
 
-机制:注册表项 `AgentPlatformConfig` 的 `skillDirs` 拆两组 `{ project: string[]; global: string[] }`——project 组相对项目根解析,global 组相对用户 home 解析(无全局 skill 目录的 agent 留空数组)。`skillDirs` 是注册表里的**静态目录数据**;扫描 + 解析 frontmatter 的逻辑落在 **core(`store.discoverSkills`)**,不在 configurator(cli.md §8.6)。结果供画布 skillRef 下拉选择 + `resolveSkillRef` 校验;web 经 `GET /api/skills` 取数、用 `agent`/`source` tag 分组展示(web §3.3)。
+> 富化项(待补,P1):每条按 `agent`(canonical/codex/claude/gemini)再细分 tag,供 web 画布按工具分组——当前基础版只给 `source` + 合并的 `paths`。
+
+机制:目录来源由 `agents/registry.ts` 的 `getProjectSkillDirs()`/`getGlobalSkillDirs()` 从 `AGENT_PLATFORMS.skillDirs` 派生(**单一数据源**,不在 skills.ts 再抄一份);project 组相对项目根解析,global 组相对用户 home 解析。扫描 + 解析 frontmatter 的逻辑落在 **core(`skills.ts`)**,不在 configurator(cli.md §8.6)。
+
+**按逻辑名去重展示**:同一逻辑 skill 会在多处被发现(尤其 Tuteur 自带的——init 往各工具目录都铺一份),`discoverSkills` 按**规范化名称**(剥 `tuteur-` 前缀等)折叠成一条、保留多来源 tag(画布下拉显示"grill-me · 已装于 codex/claude");仅当**同名但内容不同**才视为真冲突、拆开展示让作者选。节点只存逻辑名(`skill` 字段,不存路径/来源)。
+
+**运行时各工具用自己那份**:`resolveSkillRef(scope, skill)` 按当前平台的 skill 目录解析到具体一份(各工具用同名的自己那份,不跨读别的工具目录);**解析不到则报错**(validate 期对所选工具校验、运行时对当前平台校验,harness §5)。web 经 `GET /api/skills` 取去重后的名称列表、用 `agent`/`source` tag 分组(web §3.3)。
 
 ---
 
@@ -293,32 +345,38 @@ export function discoverSkills(scope: Scope): DiscoveredSkill[];   // 项目 sco
 确定性核心,纯函数 + 单测。流程见 harness.md §2/§3。
 
 ```ts
-completeNode(scope, taskId, nodeId): CompleteResult;   // 与 web 端点共用;只对 skill 节点
-advanceWorkflow(state, wf, readSignal): State;         // 纯函数:沿 next 推进,遇 decision 自动求值选边
-evaluateDecision(node, readSignal): string;            // 读 signal → 命中 branch.next
+completeNode(scope, taskId, nodeId, opts?): CompleteResult;   // 与 web 端点共用;skill 走门禁,switch 需 opts.branch
+advanceWorkflow(state, wf): State;            // 纯函数:沿 next 推进;遇 switch 停下(不自动求值,等 agent 判定)
+rewindTo(scope, taskId, nodeId): State;       // switch 判错恢复:退游标回该节点、清下游 completed+approvals、记 rewind 事件(harness §3.1)
+approveNode(scope, taskId, nodeId, by): State; // 写 state.approvals[node] + 追加 approval 事件(harness §2.6)
 resolvePlannedContext(scope, taskId, nodeId): string[];  // 合并 global injectByDefault→项目 default→node(knowledge.md §7);返回知识 id/路径清单
-resolveSkillRef(scope, skillRef): { path: string } | null;
-resolveCurrentTask(scope, explicit?): string | null;   // --task > 指针 > 唯一未完成任务兜底(harness §7.1)
-archiveTask(scope, taskId, { markCancelled? }): void;  // §9
+resolveSkillRef(scope, skill): { path: string };        // 名→具体 skill;解析不到则抛错(harness §5,缺则报错)
+resolveCurrentTask(scope, explicit?): string | null;    // --task > 指针 > 唯一未完成兜底;多个未完成→AMBIGUOUS(harness §7.1)
+phaseOf(wf, nodeId): string | null;           // 节点的阶段归属(容器成员);驱动 task.status(hook/complete/task 共用)
+archiveTask(scope, taskId, { markCancelled? }): void;   // §9
 export interface CompleteResult { ok: boolean; exitCode: 0 | 2; message?: string; state?: State; }
 ```
 
-`completeNode` 完成一个 skill 节点后,`advanceWorkflow` 沿 `next` 走;若后继是 decision 节点,`evaluateDecision` 读 signal 自动选边并继续,直到落到下一个 skill 节点或终点 —— **decision 对 agent 透明**(harness §3)。signal 不可读 → completeNode 整体失败(exit 2,提示信号缺失);有值未匹配 → 走 default(validate 已保证 default 存在)。**门禁失败不改变 state**;每次 complete 尝试(成败)都 `appendEvent`(§4.4);成功时返回的 state 用于拼装「下一节点接力输出」(harness §2.3)。`readSignal` 抽象三类信号源(artifact JSON / task 字段 / check),便于单测注入。
+`completeNode`:
+- **skill 节点**:核对 `gate`(artifacts 存在+非空 / checks 退出 0 / approval 已写),全过则 `advanceWorkflow` 沿 `next` 推进。
+- **switch 节点**:要求 `opts.branch` 是合法分支(否则 exit 2),记 `state.decisions[node]={branch,reason,by,at}` + `decision` 事件,沿该分支 `next` 推进。
+
+`advanceWorkflow` 沿 `next` 走,**遇 switch 节点停下**(把游标停在 switch,由 agent 判定后再次 complete 推进),遇终点(`next:null`)置 `currentNode=null`——**switch 不再由 harness 自动求值**(原 `evaluateDecision`/`readSignal`/signal 三源已废弃,harness §2.5/§3)。**门禁失败不改变 state**;每次 complete 尝试(成败)都 `appendEvent`(§4.4)。成功时返回的 state 用于拼装「下一节点接力 JSON」(harness §2.3)。`phaseOf` 在游标落入新阶段容器时驱动 `task.status` 翻转。纯函数 + 单测,确定性核心(K4)。
 
 ---
 
 ## 7. 数据契约(机制,不绑每步产物)
 
-契约描述四方之间的**数据通道**,**与具体 step 无关**。它不规定「每步必产什么」—— 那是各 workflow 的自由,由 step 的 `requiredArtifacts` 声明(**可为空**)。
+契约描述四方之间的**数据通道**,**与具体 step 无关**。它不规定「每步必产什么」—— 那是各 workflow 的自由,由节点的 `gate.artifacts` 声明(**可为空**)。
 
 | 角色 | 职责 | 数据通道 |
 | --- | --- | --- |
-| AI(agent) | 干活;**若**该 step 声明了 requiredArtifacts 则产出 | task 目录文件 |
+| AI(agent) | 干活;**若**该节点声明了 `gate.artifacts` 则产出 | task 目录文件 |
 | CLI/core | complete 推进 state;CLI/hook 记事件 | state.json / events.jsonl |
 | Web | 读并展示 state/event/artifact;提供操作入口 | 只读 + 操作按钮 |
-| 用户 | approve / 跳过 / 归档;回写影响下次门禁 | approvals.json / events.jsonl / archiveTask |
+| 用户 | approve / 跳过 / 归档;回写影响下次门禁 | state.approvals / events.jsonl / archiveTask |
 
-**产物按需**:step 没声明 requiredArtifacts → 门禁不查(纯执行/review 可零产物);声明了 → 缺则失败。默认 workflow 给 planning 配 `prd.md` 等只是默认 workflow 的选择,非契约强制。
+**产物按需**:节点没声明 `gate.artifacts` → 门禁不查(纯执行/review 可零产物);声明了 → 缺(或空)则失败。默认 workflow 给 planning 配 `design.md` 等只是默认 workflow 的选择,非契约强制。
 
 契约不变量(始终成立):1) **agent 自称完成 ≠ 节点完成**,完成只由 completeNode 判定;2) 门禁永不自动放行,人工跳过必须显式(`--skip`)且留痕;3) 计划注入与实际注入(`session_start` 事件的 `injected` 清单)的差异、以及事件缺失,是发现 hook 失效的信号,事件必须记录。
 
@@ -416,7 +474,7 @@ ttur task archive <id> [--cancelled]  /  web 归档按钮
 | K1 | `@tuteur/core` 包骨架 + zod 类型(§4) | P0 |
 | K2 | `paths`:双层 Scope + detectTuteur + 全局安全边界 | P0 |
 | K3 | `store`:全部读写 + 损坏文件快速失败 | P0 |
-| K4 | `domain`:completeNode/advanceWorkflow(节点图沿边+decision 求值+无环校验)/evaluateDecision/archiveTask + 单测 | P0 |
+| K4 | `domain`:completeNode(skill 门禁 / switch 带 --branch)/advanceWorkflow(沿 next、遇 switch 停、无环校验)/rewindTo/phaseOf/archiveTask + 单测 | P0 |
 | K5 | `context`:resolvePlannedContext | P0 |
 | K6 | `init-config`:InitConfig + INIT_QUESTIONS + serializeToCommand | P0 |
 | K7 | cli/app 改依赖 core,删重复读盘与常量 | P0 |
