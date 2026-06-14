@@ -14,7 +14,7 @@ import {
   type ManagedTemplate,
   type TemplateHashes,
 } from '../installation/managed-templates.js';
-import { ensureDir } from '../utils/fs.js';
+import { ensureDir } from '@tuteur/core';
 
 interface UpdateCommandOptions {
   dryRun?: boolean;
@@ -185,7 +185,10 @@ async function confirmUpdate(options: UpdateCommandOptions): Promise<void> {
   }
 }
 
-async function resolveConflictAction(template: ManagedTemplate, options: UpdateCommandOptions): Promise<ConflictAction> {
+async function resolveConflictAction(
+  template: ManagedTemplate,
+  options: UpdateCommandOptions,
+): Promise<ConflictAction> {
   if (options.force) {
     return 'overwrite';
   }

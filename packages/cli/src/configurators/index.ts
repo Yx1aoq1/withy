@@ -1,4 +1,5 @@
-export { AGENT_PLATFORMS, configureAgentPlatform, getAgentPlatform, getInitAgentChoices } from './registry.js';
-export type { AgentTool, RegisteredAgentPlatformConfig as AgentPlatformConfig } from './registry.js';
+export { configureAgentPlatform, getInitAgentChoices, getAgentPlatform, AGENT_PLATFORMS } from './registry.js';
 export { installCanonicalWorkflowSkills } from './shared.js';
-export type { ConfigureAgentContext, ConfigureAgentResult, SkillAdapterMode, TemplateContext } from '../types/agent.js';
+
+export type { ConfigureAgentContext, ConfigureAgentResult, SkillAdapterMode, TemplateContext } from '@tuteur/core';
+export type { RegisteredAgentPlatformConfig as AgentPlatformConfig, AgentTool } from './registry.js';

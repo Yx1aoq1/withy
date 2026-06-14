@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { ensureDir, slugify, writeJsonFileIfMissing, writeText, writeTextIfMissing } from '@tuteur/core';
 import {
   configureAgentPlatform,
   installCanonicalWorkflowSkills,
@@ -6,7 +7,6 @@ import {
   type SkillAdapterMode,
 } from '../configurators/index.js';
 import { PRODUCT_DISPLAY_NAME, PROJECT_DIR_NAME } from '../constants/product.js';
-import { ensureDir, writeJsonIfMissing, writeText, writeTextIfMissing } from '../utils/fs.js';
 import { getInstalledWorkflowSkillTemplates, recordCurrentTemplateHashes } from './managed-templates.js';
 
 export interface InitProjectOptions {
@@ -55,7 +55,7 @@ export async function initProject(options: InitProjectOptions): Promise<InitProj
     createdPaths,
   );
 
-  writeJsonIfMissing(
+  writeJsonFileIfMissing(
     resolve(projectDir, 'config.json'),
     {
       version: '0.1.0',
@@ -74,7 +74,7 @@ export async function initProject(options: InitProjectOptions): Promise<InitProj
     createdPaths,
   );
 
-  writeJsonIfMissing(
+  writeJsonFileIfMissing(
     resolve(projectDir, 'context.json'),
     {
       default: {
@@ -82,39 +82,52 @@ export async function initProject(options: InitProjectOptions): Promise<InitProj
         optional: [],
         disabled: [],
       },
-      agents: {},
+      nodes: {},
     },
     createdPaths,
   );
 
-  writeJsonIfMissing(
+  writeJsonFileIfMissing(
     resolve(projectDir, 'workflows/default.workflow.json'),
     {
       id: 'default',
       name: 'Default Coding Workflow',
-      version: '0.1.0',
+      version: '0.3.0',
+      entry: 'triage',
       phases: [
+        { id: 'planning', label: '规划', entry: 'brainstorm' },
+        { id: 'execute', label: '执行', entry: 'dev' },
+        { id: 'finish', label: '收尾', entry: 'wrapup' },
+      ],
+      nodes: [
         {
-          id: 'planning',
-          name: 'Planning',
-          steps: [
-            { id: 'brainstorm', skillRef: 'brainstorm', required: true },
-            { id: 'grill-me', skillRef: 'grill-me', required: true },
+          id: 'triage',
+          type: 'switch',
+          branches: [
+            { label: 'standard', criteria: '常规需求,需要完整规划再开发', default: true, next: 'brainstorm' },
+            { label: 'small', criteria: '改动小、风险低,可跳过规划直接开发', next: 'dev' },
+            { label: 'research', criteria: '只需调研、产出结论,不写生产代码', next: 'wrapup' },
           ],
         },
+        { id: 'brainstorm', type: 'skill', skill: 'brainstorm', phase: 'planning', next: 'grill-me' },
         {
-          id: 'execute',
-          name: 'Execute',
-          steps: [
-            { id: 'dev', skillRef: 'dev', required: true },
-            { id: 'check', skillRef: 'check', required: true },
-          ],
+          id: 'grill-me',
+          type: 'skill',
+          skill: 'grill-me',
+          phase: 'planning',
+          next: 'dev',
+          gate: { artifacts: ['design.md'], approval: true },
         },
+        { id: 'dev', type: 'skill', skill: 'dev', phase: 'execute', next: 'check' },
         {
-          id: 'finish',
-          name: 'Finish',
-          steps: [{ id: 'finish', skillRef: 'finish', required: true }],
+          id: 'check',
+          type: 'skill',
+          skill: 'check',
+          phase: 'execute',
+          next: 'wrapup',
+          gate: { checks: ['npm test'] },
         },
+        { id: 'wrapup', type: 'skill', skill: 'finish', phase: 'finish', next: null },
       ],
     },
     createdPaths,
@@ -140,7 +153,11 @@ export async function initProject(options: InitProjectOptions): Promise<InitProj
     }
   }
 
-  recordCurrentTemplateHashes(options.projectRoot, getInstalledWorkflowSkillTemplates(options.projectRoot), createdPaths);
+  recordCurrentTemplateHashes(
+    options.projectRoot,
+    getInstalledWorkflowSkillTemplates(options.projectRoot),
+    createdPaths,
+  );
 
   return {
     projectRoot: options.projectRoot,
@@ -153,7 +170,7 @@ export async function initProject(options: InitProjectOptions): Promise<InitProj
 function writeProjectUser(projectDir: string, name: string, createdPaths: string[]): ProjectUser {
   const currentUser = {
     name: name.trim(),
-    slug: slugifyUserName(name),
+    slug: slugify(name, 'user'),
   };
   const now = new Date().toISOString();
 
@@ -182,14 +199,4 @@ function writeProjectUser(projectDir: string, name: string, createdPaths: string
   );
 
   return currentUser;
-}
-
-function slugifyUserName(name: string): string {
-  const slug = name
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^\p{Letter}\p{Number}]+/gu, '-')
-    .replace(/^-+|-+$/g, '');
-
-  return slug || 'user';
 }
