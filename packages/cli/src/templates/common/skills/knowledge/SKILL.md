@@ -1,5 +1,5 @@
 ---
-name: {{SKILL_NAME}}
+name: { { SKILL_NAME } }
 description: Maintain the {{PRODUCT_NAME}} knowledge base — ingest sources, answer from the wiki, and keep it consistent.
 ---
 

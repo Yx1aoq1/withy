@@ -6,3 +6,6 @@ coverage/
 packages/app/next-env.d.ts
 *.tsbuildinfo
 *.log
+
+# Machine-generated lockfile (not Prettier's to format)
+pnpm-lock.yaml

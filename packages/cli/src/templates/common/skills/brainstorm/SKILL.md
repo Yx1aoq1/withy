@@ -1,5 +1,5 @@
 ---
-name: {{SKILL_NAME}}
+name: { { SKILL_NAME } }
 description: Draft the initial task PRD for a {{PRODUCT_NAME}} workflow.
 ---
 

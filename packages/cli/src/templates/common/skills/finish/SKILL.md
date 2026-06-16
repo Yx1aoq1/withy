@@ -1,5 +1,5 @@
 ---
-name: {{SKILL_NAME}}
+name: { { SKILL_NAME } }
 description: Finish and summarize a {{PRODUCT_NAME}} workflow.
 ---
 

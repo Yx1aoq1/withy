@@ -9,7 +9,10 @@ const packageJson = require('../package.json') as { version: string };
 export async function createCliProgram(): Promise<Command> {
   const program = new Command();
 
-  program.name(CLI_COMMAND_NAME).description('Local-first workflow harness for AI coding agents').version(packageJson.version);
+  program
+    .name(CLI_COMMAND_NAME)
+    .description('Local-first workflow harness for AI coding agents')
+    .version(packageJson.version);
 
   await registerCommands(program);
 

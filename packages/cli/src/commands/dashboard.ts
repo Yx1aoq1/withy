@@ -48,7 +48,17 @@ function startDashboard(): void {
 
   const child = spawn(
     'pnpm',
-    ['--filter', DASHBOARD_PACKAGE_NAME, 'exec', 'next', 'dev', '--hostname', DEFAULT_HOST, '--port', String(DEFAULT_PORT)],
+    [
+      '--filter',
+      DASHBOARD_PACKAGE_NAME,
+      'exec',
+      'next',
+      'dev',
+      '--hostname',
+      DEFAULT_HOST,
+      '--port',
+      String(DEFAULT_PORT),
+    ],
     {
       cwd: projectRoot,
       detached: true,

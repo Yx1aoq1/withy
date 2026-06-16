@@ -3,9 +3,7 @@
     "SessionStart": [
       {
         "matcher": "",
-        "hooks": [
-          { "type": "command", "command": "ttur hook session-start" }
-        ]
+        "hooks": [{ "type": "command", "command": "ttur hook session-start" }]
       }
     ]
   }

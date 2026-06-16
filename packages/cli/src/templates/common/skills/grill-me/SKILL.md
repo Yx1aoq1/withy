@@ -1,5 +1,5 @@
 ---
-name: {{SKILL_NAME}}
+name: { { SKILL_NAME } }
 description: Tighten requirements and produce planning artifacts for {{PRODUCT_NAME}}.
 ---
 
