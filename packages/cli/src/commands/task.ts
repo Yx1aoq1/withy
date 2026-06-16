@@ -4,10 +4,13 @@ import {
   initialState,
   listTasks,
   readDeveloper,
+  readKnowledgeEntry,
   readState,
   readTask,
   readWorkflow,
+  skillExists,
   taskExists,
+  validateWorkflow,
   writeCurrentTaskPointer,
   writeState,
   writeTask,
@@ -69,6 +72,18 @@ function runCreate(title: string, options: CreateOptions): void {
     emit({ ok: false, error: `workflow "${options.workflow}" not found: ${(error as Error).message}` }, 1);
   }
 
+  // Refuse to start a task on a structurally broken workflow; surface dangling
+  // skill/template refs as warnings (they may resolve later). harness §3/H10.
+  const issues = validateWorkflow(workflow, {
+    skillExists: name => skillExists(scope, name),
+    templateExists: templateId => readKnowledgeEntry(scope, templateId) !== null,
+  });
+  const errors = issues.filter(issue => issue.level === 'error');
+  if (errors.length > 0) {
+    emit({ ok: false, error: `workflow "${workflow.id}" is invalid`, issues: errors }, 1);
+  }
+  const warnings = issues.filter(issue => issue.level === 'warning').map(issue => issue.message);
+
   const id = makeTaskId(title);
   if (taskExists(scope, id)) {
     emit({ ok: false, error: `task already exists: ${id}` }, 1);
@@ -94,7 +109,7 @@ function runCreate(title: string, options: CreateOptions): void {
   writeState(scope, state);
   writeCurrentTaskPointer(scope, id);
 
-  emit({ ok: true, task: id, status: task.status, node: state.currentNode });
+  emit({ ok: true, task: id, status: task.status, node: state.currentNode, warnings });
 }
 
 interface ListOptions {
