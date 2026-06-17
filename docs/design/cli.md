@@ -104,9 +104,15 @@ ttur init
 
 **交互输入**:agent 多选用 `@inquirer/prompts` 的 checkbox(choices 由注册表 `defaultChecked` 派生);名字这类纯文本输入参考 Trellis 用 readline 避免闪烁。问题定义见 `INIT_QUESTIONS`(core.md §8),与 web 表单同源。
 
-### 4.2 `ttur dashboard start|stop`(已实现,待调整)
+### 4.2 `ttur dashboard start|stop`(已实现)
 
-当前 `start` 把单一 `TUTEUR_PROJECT_ROOT` 传给 `next dev`。**多项目 dashboard 下,项目根不再由启动参数固定**,而由 web 端选择(web.md §2)。`start` 应改为:确保全局根存在 → 启动 dashboard(不强绑单项目)→ 写 `runtime/dashboard.json`。详见 web.md §7。
+dashboard 是**多项目管理器**,项目根不再由启动参数固定,而由 web 端选择(web.md §2)。当前实现:
+
+- `start` 门禁改为**全局根** `~/.tuteur` 存在(`resolveGlobalScope` + `isDirectory`),不再要求 cwd 是已初始化项目;缺失则报错引导先跑 `ttur init --global`。
+- runtime 状态写在**全局根** `~/.tuteur/runtime/dashboard.json`(经 `runtimeDir(resolveGlobalScope())`),与 cwd 解绑;`stop` 据此定位进程,任意目录均可执行。
+- `TUTEUR_PROJECT_ROOT` 仅在 cwd 本身是已初始化项目(`detectTuteur(cwd)`)时设置,作为「无选择时默认项目」兜底(web.md §2.3);否则不注入,前端从空项目列表开始添加。
+
+详见 web.md §7。standalone server 打包(脱离 monorepo 的 `pnpm --filter`)仍属后续(web.md W9)。
 
 ### 4.3 `ttur update` / `uninstall`(已实现,保留)
 
