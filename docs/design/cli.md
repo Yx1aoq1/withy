@@ -13,11 +13,11 @@
 | --------------------------------------- | -------------------------------- |
 | 命令解析、交互、参数校验                | ——                               |
 | 初始化项目/全局结构、装 skill、配 agent | configurator 引擎(§8)            |
-| 读写数据、计算 phase/step、门禁判定     | **@tuteur/core**(store + domain) |
+| 读写数据、计算 phase/step、门禁判定     | **@tuteur/core**(store + workflow + task) |
 | hook 事件入口(`ttur hook <event>`)      | core(context/state)              |
 | 模板更新冲突检测                        | installation/managed-templates   |
 
-核心不变量:**agent 自称完成 ≠ 节点完成**,完成只由 `ttur complete <node>`(经 `core.completeNode`)判定。
+核心不变量:**agent 自称完成 ≠ 节点完成**,流程推进只由 core 门禁判定。agent 面向入口只保留 `ttur next`;CLI `complete <node>` 明确删除,不保留兼容入口。
 
 ---
 
@@ -34,9 +34,9 @@ packages/cli/src/
     dashboard.ts          # [已实现] dashboard 进程管理
     uninstall.ts update.ts# [已实现] 卸载 / 模板更新
     task.ts               # [已实现] 任务命令族(create/list/status/start/assign/archive)
-    complete.ts           # [已实现] 节点门禁(调 core.completeNode;--branch/--skip)
-    rewind.ts             # [已实现] switch 回退(调 core.rewindTo)
-    approve.ts            # [已实现] 人工确认(调 core.approveNode)
+    next.ts               # [待实现] 唯一推进入口(读取 currentNode 后校验 gate;替代并删除 complete.ts)
+    rewind.ts             # [已实现待调整] switch 回退(改为 --to <node>,调 core.rewindTo)
+    approve.ts            # [已实现待调整] 人工确认(改为无 node 参数,批准 currentNode)
     hook.ts               # [已实现] 平台事件入口 session-start(§5.3)
   configurators/
     registry.ts           # [已实现] 行为表 PLATFORM_CONFIGURATORS + configureAgentPlatform 派发(数据从 @tuteur/core 引)
@@ -53,7 +53,7 @@ packages/cli/src/
 
 ### 2.1 约定式命令加载(已实现,保留)
 
-`commands/index.ts` 扫描目录,每个文件默认导出 `(program)=>void|Promise<void>`,按字母序注册。**加命令 = 放一个文件**,不改 `program.ts`。新增 `task.ts`/`complete.ts`/`hook.ts` 即自动生效。
+`commands/index.ts` 扫描目录,每个文件默认导出 `(program)=>void|Promise<void>`,按字母序注册。**加命令 = 放一个文件**,不改 `program.ts`。新增 `task.ts`/`next.ts`/`hook.ts` 即自动生效。`complete.ts` 应随 `next.ts` 落地后删除。
 
 ---
 
@@ -120,7 +120,7 @@ dashboard 是**多项目管理器**,项目根不再由启动参数固定,而由 
 
 ---
 
-## 5. 待实现命令
+## 5. 运行时命令
 
 退出码约定:`0` 成功 / `1` 通用错误 / `2` **门禁失败** / `3` 用户取消。**命令面向 agent,统一吐简单 JSON**(`{ok, ...}`,成败都结构化,退出码语义不变);人看进度去 web,不为 CLI 做花哨人读文本(harness §2.3)。
 
@@ -139,29 +139,33 @@ ttur task archive <task> [--cancelled]
 
 `create`(**新任务通常由 agent 替用户建**:用户描述需求 → agent 跑此命令):`core.resolveProjectScope()` → 校验 workflow → `taskId=<MM-DD>-<slug>` → 写归属(`creator = 当前 .developer.slug`,`assignee = --assignee ?? 当前 .developer.slug`;**既无 `.developer` 又无 `--assignee` 则快速失败**,提示先 `ttur init -u`,对齐 Trellis,core.md §3.1)→ `core.writeTask/writeState`(state 初始化到 `entry` 节点);同名检测只查活跃任务目录(归档区按 `<YYYY-MM>` 分桶,跨年同名可共存,core.md §9)。`start`:写当前任务指针,完成/归档自动清除(harness §7.1)。`assign`:只改 `assignee`(校验 `workspace/<slug>/` 在册,core.md §3.1)。`list --mine` 用 `core.isOwnedBy`(按 assignee)+ `core.shouldFilterByUser`(全局根不过滤,core.md §3),默认不含归档。`archive`:`core.archiveTask` —— 默认不改 status(未完成任务询问,或 `--cancelled` 标记取消)+ 写 archivedAt + 移动目录到 `tasks/archive/<YYYY-MM>/<id>/`,**不绑任何产物、不执行任何 git 操作**(core.md §9)。
 
-### 5.2 `ttur complete <node>` —— 核心门禁
+### 5.2 `ttur next` —— agent 面向核心门禁
 
 ```text
-ttur complete <node> [--task <task>] [--branch <label> --reason "..."] [--skip --reason "..."]
-  # skill 节点:核对 gate(artifacts/checks/approval);switch 节点:需 --branch <label> --reason
+ttur next [--task <task>] [--branch <label> --reason "..."] [--skip --reason "..."]
+  # 不接收 node 参数;从 state.currentNode 读取当前节点
+  # skill 节点:核对 gate(artifacts/checks/approval)
+  # switch 节点:无 --branch 时输出合法分支与 nextAction;有 --branch 时校验并推进
   # --task 缺省走 resolveCurrentTask(harness §7.1);输出统一简单 JSON
-  → core.completeNode(scope, taskId, node, { branch, reason, by })
+  → core.nextNode(scope, taskId, { branch, reason, by })   # 唯一推进门禁:读取 currentNode
   → result.ok  → exit 0 + stdout 下一步 JSON(harness §2.3:next 节点/类型;switch 列分支 criteria)
   → !result.ok → exit 2 + { ok:false, blocked:[...] }(缺产物/检查失败/待 approve;或 switch 缺/非法 --branch)
   → --skip     → 人工显式跳过并留痕(门禁永不自动放行,harness §2.4)
   每次调用(成败)appendEvent 到 events.jsonl(core §4.4)
 ```
 
-CLI 只做"解析参数 + 调 core + 映射退出码",**门禁与节点图推进全在 core**(harness.md §2/§3)。
+CLI 只做"解析参数 + 调 core + 映射退出码",**门禁与节点图推进全在 core**(harness.md §2/§3)。`ttur next` 是为 agent 降低参数歧义的唯一推进入口:agent 不需要知道当前节点 id,也不能传错节点。
 
-### 5.2.1 `ttur rewind <node>` / `ttur approve <node>`
+> **落地状态**:`ttur next` 待实现。当前已有 `ttur complete <node>` 的旧实现,但本轮决策是迁移门禁逻辑后**删除 `complete` 命令**,不保留兼容入口,也不在 hook/skill/web 中引用它。
+
+### 5.2.1 `ttur rewind --to <node>` / `ttur approve`
 
 ```text
-ttur rewind <node> [--task <task>] [--reason "..."]   # switch 判错恢复:退游标回该节点、清下游、记 rewind 事件(harness §3.1)
-ttur approve <node> [--task <task>]                    # 写 state.approvals(by=当前 .developer.slug)+ approval 事件;agent 或人均可跑(harness §2.6)
+ttur rewind --to <node> [--task <task>] [--reason "..."]   # switch 判错恢复:退游标回目标节点、清下游、记 rewind 事件(harness §3.1)
+ttur approve [--task <task>]                              # 批准当前 currentNode,写 state.approvals[currentNode]+ approval 事件
 ```
 
-`approve` 是 approval 门禁的写入口(web 点确认是等价的另一入口);`rewind` 是无环图下唯一的"往回走"恢复动作,显式留痕。
+`approve` 是 approval 门禁的写入口(web 点确认是等价的另一入口),不再接收 node 参数;`rewind` 是无环图下唯一的"往回走"恢复动作,因为目标通常不是当前节点,所以保留显式 `--to <node>`。
 
 ### 5.3 `ttur hook <event>` —— 平台事件统一入口(三阶段)
 
@@ -205,9 +209,7 @@ ttur knowledge lint  [--global]                        # 孤儿页/断链/悬空
 `.tuteur/` 结构、各 JSON schema、双层布局**统一在 [core.md §2/§4](./core.md)**,本文不复制。CLI 只通过 `core.store` 读写。
 
 由 `init` 写出:`config.json`、`context.json`、`workflows/default.workflow.json`、`template-hashes.json`、`.developer`、`workspace/<slug>/index.md`、`.gitignore`。
-由 `task`/`complete`/`approve`/`hook` 运行时写出(已实现):`tasks/<id>/task.json`、`tasks/<id>/state.json`(含 `decisions`/`approvals`)、`tasks/<id>/events.jsonl`、`runtime/current-task.json`。归档后迁入 `tasks/archive/<YYYY-MM>/<id>/`。
-
-> 注意:`init` 当前写的 `default.workflow.json` 仍是旧扁平结构(节点只有 `skillRef`/`required`)。需改成固定阶段容器 + skill/switch 节点 + `gate` 门禁(core §4.3、harness §1)。
+由 `task`/`next`/`approve`/`hook` 运行时写出:`tasks/<id>/task.json`、`tasks/<id>/state.json`(含 `decisions`/`approvals`)、`tasks/<id>/events.jsonl`、`runtime/current-task.json`。归档后迁入 `tasks/archive/<YYYY-MM>/<id>/`。旧 `complete` 实现写过相同路径,迁移完成后删除命令。
 
 ---
 
@@ -439,23 +441,25 @@ web 经 `GET /api/skills?project`(web §3.3/§9 W11)拿到去重后的结果;`re
 - **数据注册表 + per-agent configurator + shared 通用层**(Trellis 风格)兼顾「每平台一个文件可读」与「公共生成逻辑不重复」,呼应你的诉求 4。注册表纯数据,挂 hook/定义 agent 一律走 `templates/<id>/` 模板树,不做适配器配置。
 - **InitConfig 统一模型** 让 CLI flag/交互/web 表单三种输入同源,初始化逻辑只有一份(诉求 1)。
 - **依赖 core** 后,CLI 不再持有读盘逻辑,与 app 行为天然一致(诉求 2)。
-- 现状缺口仍是:核心命令(task/complete/hook)未实现、无测试。
+- 现状缺口仍是:`ttur next` 未实现、`complete` 命令待删除、`approve`/`rewind` 的 node 参数待收敛、核心门禁测试不足、workflow 类 skill 正文仍为 TODO。
 
 ### 9.2 TODO
 
-| #   | 项                                                                                                                                                    | 优先级 | 依赖                             |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------------------------- |
-| C1  | CLI 改依赖 `@tuteur/core`,删自有读盘/常量                                                                                                             | P0     | core K1-K7                       |
-| C2  | `task create/list/status/start/assign/archive`(create 写 creator/assignee 默认当前用户、无身份快速失败,§3.1;归档:不改状态/`--cancelled`/YYYY-MM 分桶) | P0     | core store/§3.1/§9、harness §7.1 |
-| C3  | `complete <node>`(skill gate / switch `--branch --reason`;退出码 0/2;JSON 接力;`--skip` 留痕)+ `rewind` + `approve`                                   | P0     | core K4、harness §2.3-§2.6       |
-| C4  | `hook <event>` 入口 + hook 声明文件(命令直配,无脚本)+ session_start 事件回写                                                                          | P0     | core context、harness §6         |
-| C5  | 数据注册表(含 skillDirs 两组)+ PLATFORM_CONFIGURATORS 行为表 + 模板树承载 hook(含 Codex feature flag 指引)                                            | P0     | §8                               |
-| C6  | InitConfig 三输入(flag/交互/web)+ serializeToCommand                                                                                                  | P0     | core §8                          |
-| C7  | `init --global`(只装模板+config+projects,不配 agent)                                                                                                  | P1     | core §2.3                        |
-| C8  | `uninstall --global`、dashboard 多项目调整                                                                                                            | P1     | web §2/§7                        |
+| #   | 项                                                                                                                                                    | 状态/优先级 | 依赖                             |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | -------------------------------- |
+| C1  | CLI 改依赖 `@tuteur/core`,删自有读盘/常量                                                                                                             | ✅ 已实现 | core K1-K7                       |
+| C2  | `task create/list/status/start/assign/archive`(create 写 creator/assignee 默认当前用户、无身份快速失败,§3.1;归档:不改状态/`--cancelled`/YYYY-MM 分桶) | ✅ 已实现 | core store/§3.1/§9、harness §7.1 |
+| C3  | 旧 `complete <node>`(skill gate / switch `--branch --reason`;退出码 0/2;JSON 接力;`--skip` 留痕)+ `rewind` + `approve`                                | ✅ 已实现(待迁移删除) | core K4、harness §2.3-§2.6       |
+| C3a | `next`(读取 currentNode、承载唯一推进门禁、switch 无 branch 时输出分支提示;hook/skill 改提示它)                                                       | P0     | C3、harness §2                   |
+| C3b | 删除 `complete` 命令与 node 参数入口;`approve <node>` → `approve`;`rewind <node>` → `rewind --to <node>`                                             | P0     | C3a                              |
+| C4  | `hook <event>` 入口 + hook 声明文件(命令直配,无脚本)+ session_start 事件回写                                                                          | ✅ 已实现(session-start);per-turn/subagent 待补 | core context、harness §6         |
+| C5  | 数据注册表(含 skillDirs 两组)+ PLATFORM_CONFIGURATORS 行为表 + 模板树承载 hook(含 Codex feature flag 指引)                                            | ✅ 已实现 | §8                               |
+| C6  | InitConfig 三输入(flag/交互/web)+ serializeToCommand                                                                                                  | 🟡 CLI/core 已实现;web 表单待接入 | core §8                          |
+| C7  | `init --global`(只装模板+config+projects,不配 agent)                                                                                                  | ✅ 已实现 | core §2.3                        |
+| C8  | `uninstall --global`、dashboard 多项目调整                                                                                                            | 🟡 uninstall/global dashboard runtime 已实现;web 多项目待补 | web §2/§7                        |
 | C9  | 给门禁/状态/归档/decision 写 Vitest                                                                                                                   | P0     | core K4                          |
-| C10 | `discoverSkills`(core 能力,项目+agent home,带 tag;供 web `GET /api/skills`,**不暴露 CLI 命令**)                                                       | P1     | §8.6、core §5.1                  |
-| C11 | `workflow validate`(节点连通/无环/阶段单调/switch default/skill 可解析)                                                                               | P2     | core resolveSkillRef             |
+| C10 | `discoverSkills`(core 能力,项目+agent home,带 tag;供 web `GET /api/skills`,**不暴露 CLI 命令**)                                                       | 🟡 基础版已实现 | §8.6、core §5.1                  |
+| C11 | `workflow validate`(节点连通/无环/阶段单调/switch default/skill 可解析)                                                                               | ✅ 已实现 | core resolveSkillRef             |
 | C12 | ~~`task create --worktree`~~ 已后置(方案存档 core §9.1)                                                                                               | P2     | core §9.1                        |
 
 ### 9.3 待确认
