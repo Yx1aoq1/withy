@@ -5,7 +5,4 @@ coverage/
 .tuteur/runtime/
 *.tsbuildinfo
 *.log
-
-# Local agent tooling (installed skills, local Claude/agent settings)
-.agents/
-.claude/
+.temp/
