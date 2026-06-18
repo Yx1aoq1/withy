@@ -54,8 +54,13 @@ export type State = z.infer<typeof StateSchema>;
 
 // ──────────────────────────────────────────────────────────────────────────
 // Workflow (workflows/<id>.workflow.json) — core.md §4.3
-// Fixed phase containers + two node types (skill | switch).
+// Fixed three phases + two node types (skill | switch).
 // ──────────────────────────────────────────────────────────────────────────
+
+// Canvas coordinate of a node (free-form layout). Persisted for the editor to
+// restore positions; never participates in validation — web §3.3, core §4.3.
+export const PositionSchema = z.object({ x: z.number(), y: z.number() });
+export type Position = z.infer<typeof PositionSchema>;
 
 // A gate artifact: a bare path (back-compat) or an object adding a display title
 // and a template knowledge-id reference. The gate only checks `path` (exists +
@@ -79,6 +84,7 @@ export const SkillNodeSchema = z.object({
   skill: z.string(),
   next: z.string().nullable(),
   phase: z.string().nullable().optional(),
+  pos: PositionSchema.optional(),
   gate: GateSchema.optional(),
 });
 export type SkillNode = z.infer<typeof SkillNodeSchema>;
@@ -95,6 +101,7 @@ export const SwitchNodeSchema = z.object({
   id: z.string(),
   type: z.literal('switch'),
   phase: z.string().nullable().optional(),
+  pos: PositionSchema.optional(),
   branches: z.array(BranchSchema).min(1),
 });
 export type SwitchNode = z.infer<typeof SwitchNodeSchema>;
