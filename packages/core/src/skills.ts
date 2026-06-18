@@ -1,9 +1,9 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { getGlobalSkillDirs, getProjectSkillDirs } from './agents/registry.js';
 import { PRODUCT_SLUG } from './constants.js';
-import { isDirectory } from './utils/fs.js';
+import { readTextFile, isDirectory } from './utils/fs.js';
 import type { Scope } from './paths.js';
 
 export interface DiscoveredSkill {
@@ -91,7 +91,7 @@ export function skillExists(scope: Scope, skill: string): boolean {
 
 function readDescription(skillFile: string): string | undefined {
   try {
-    const text = readFileSync(skillFile, 'utf8');
+    const text = readTextFile(skillFile);
     const match = text.match(/^description:\s*(.+)$/m); // simple frontmatter scan
     return match?.[1]?.trim();
   } catch {

@@ -1,4 +1,4 @@
-import { appendFileSync, writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { readdirSync, existsSync, rmSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import type { z } from 'zod';
 import { EVENT_REASON_MAX } from './constants.js';
@@ -10,7 +10,6 @@ import {
   knowledgeDir,
   workflowPath,
   archiveDir,
-  runtimeDir,
   guidePath,
   taskPath,
   tasksDir,
@@ -20,6 +19,7 @@ import {
   type ContextConfig,
   type Checklist,
   type Developer,
+  type ProjectRef,
   type TaskEvent,
   type Workflow,
   type State,
@@ -33,7 +33,15 @@ import {
   StateSchema,
   TaskSchema,
 } from './types.js';
-import { nowIso, readJsonFile, writeJsonFile } from './utils/index.js';
+import {
+  readTextFileIfExists,
+  appendJsonlLine,
+  writeJsonFile,
+  writeTextFile,
+  readJsonFile,
+  readTextFile,
+  nowIso,
+} from './utils/index.js';
 
 /** Raised when a `.tuteur/` file is missing or fails schema validation. */
 export class StoreError extends Error {}
@@ -155,16 +163,14 @@ export function writeWorkflow(scope: Scope, workflow: Workflow): void {
 // ── Events (append-only, single-process; no lock — core.md §4.4) ─────────────
 
 export function appendEvent(scope: Scope, taskId: string, event: TaskEvent): void {
-  const file = taskPath(scope, taskId, 'events.jsonl');
-  mkdirSync(resolve(file, '..'), { recursive: true });
-  appendFileSync(file, `${JSON.stringify(truncateReason(event))}\n`, 'utf8');
+  appendJsonlLine(taskPath(scope, taskId, 'events.jsonl'), truncateReason(event));
 }
 
 export function readEvents(scope: Scope, taskId: string): TaskEvent[] {
   const file = taskReadPath(scope, taskId, 'events.jsonl');
   if (!existsSync(file)) return [];
   const events: TaskEvent[] = [];
-  for (const line of readFileSync(file, 'utf8').split('\n')) {
+  for (const line of readTextFile(file).split('\n')) {
     const trimmed = line.trim();
     if (!trimmed) continue;
     try {
@@ -245,17 +251,13 @@ export function readContextConfig(scope: Scope): ContextConfig {
 // ── Session guide (.tuteur/guide.md — tool-level intro, injected verbatim) ───
 
 export function readGuide(scope: Scope): string | null {
-  const file = guidePath(scope);
-  if (!existsSync(file)) return null;
-  return readFileSync(file, 'utf8');
+  return readTextFileIfExists(guidePath(scope));
 }
 
 // ── Knowledge entries (raw markdown; frontmatter parsed in knowledge.ts) ─────
 
 export function readKnowledgeSource(scope: Scope, id: string): string | null {
-  const file = knowledgeWikiPath(scope, id);
-  if (!existsSync(file)) return null;
-  return readFileSync(file, 'utf8');
+  return readTextFileIfExists(knowledgeWikiPath(scope, id));
 }
 
 // One wiki page file on disk (raw; frontmatter parsed in knowledge.ts).
@@ -291,7 +293,7 @@ export function listKnowledgeFiles(scope: Scope): KnowledgeFile[] {
         files.push({
           id: entry.name.slice(0, -'.md'.length),
           wikiRelPath: relative(wikiRoot, full).split(/[\\/]/).join('/'),
-          raw: readFileSync(full, 'utf8'),
+          raw: readTextFile(full),
         });
       }
     }
@@ -303,9 +305,7 @@ export function listKnowledgeFiles(scope: Scope): KnowledgeFile[] {
 
 /** Write text to a path relative to `knowledge/` (creates parents). Backs `ttur knowledge index`. */
 export function writeKnowledgeFile(scope: Scope, relPath: string, content: string): void {
-  const file = resolve(knowledgeDir(scope), relPath);
-  mkdirSync(resolve(file, '..'), { recursive: true });
-  writeFileSync(file, content, 'utf8');
+  writeTextFile(resolve(knowledgeDir(scope), relPath), content);
 }
 
 // ── Developer identity ───────────────────────────────────────────────────────
@@ -322,6 +322,19 @@ export function readProjects(scope: Scope): ProjectsRegistry {
   const file = projectsRegistryPath(scope);
   if (!existsSync(file)) return ProjectsRegistrySchema.parse({});
   return readValidated(file, ProjectsRegistrySchema, 'projects.json');
+}
+
+/**
+ * Look up a registered project by its (URL-identity) name. Names are the unique
+ * key the web dashboard routes on (`/<name>`), so the add flow checks this to
+ * reject duplicates before registering. core.md §2.1, web.md §2.1.
+ *
+ * @param scope global scope holding the registry
+ * @param name project name to match (exact)
+ * @return the matching project, or null when the name is free
+ */
+export function findProjectByName(scope: Scope, name: string): ProjectRef | null {
+  return readProjects(scope).projects.find(entry => entry.name === name) ?? null;
 }
 
 /** Register (or refresh) a project in the global registry, deduped by path. */
@@ -343,7 +356,7 @@ export function readCurrentTaskPointer(scope: Scope): string | null {
   const file = currentTaskPointerPath(scope);
   if (!existsSync(file)) return null;
   try {
-    const raw = JSON.parse(readFileSync(file, 'utf8')) as { taskId?: unknown };
+    const raw = JSON.parse(readTextFile(file)) as { taskId?: unknown };
     return typeof raw.taskId === 'string' ? raw.taskId : null;
   } catch {
     return null;
@@ -351,7 +364,6 @@ export function readCurrentTaskPointer(scope: Scope): string | null {
 }
 
 export function writeCurrentTaskPointer(scope: Scope, taskId: string): void {
-  mkdirSync(runtimeDir(scope), { recursive: true });
   writeJsonFile(currentTaskPointerPath(scope), { taskId, updatedAt: nowIso() });
 }
 

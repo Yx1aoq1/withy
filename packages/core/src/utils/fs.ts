@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, renameSync, statSync, readFileSync } from 'node:fs';
+import { writeFileSync as writeFileAtomic } from 'atomically';
 import { dirname } from 'node:path';
 
 /** Create a directory (recursive) if absent, tracking the created path. */
@@ -12,15 +13,39 @@ export function ensureDir(path: string, createdPaths: string[], writtenPaths?: s
   return true;
 }
 
-/** Write text, creating parent dirs; records the path only when newly created. */
+/** Write text atomically, creating parent dirs; records the path only when newly created. */
 export function writeText(path: string, value: string, createdPaths: string[]): boolean {
   const existed = existsSync(path);
-  ensureDir(dirname(path), createdPaths);
-  writeFileSync(path, value, 'utf8');
+  ensureDir(dirname(path), createdPaths); // track created dirs for installer rollback before the atomic write
+  writeFileAtomic(path, value, 'utf8');
   if (!existed) {
     createdPaths.push(path);
   }
   return !existed;
+}
+
+/** Read a text file (utf8). Throws on missing/unreadable input. */
+export function readTextFile(path: string): string {
+  return readFileSync(path, 'utf8');
+}
+
+/** Read a text file, or null when it is absent. */
+export function readTextFileIfExists(path: string): string | null {
+  if (!existsSync(path)) {
+    return null;
+  }
+  return readFileSync(path, 'utf8');
+}
+
+/** Write text atomically (temp file + rename); creates parent dirs. Untracked variant of {@link writeText}. */
+export function writeTextFile(path: string, value: string): void {
+  writeFileAtomic(path, value, 'utf8');
+}
+
+/** Append one compact JSON line to a JSONL log (creates parent dirs). Append-only — no whole-file atomicity. */
+export function appendJsonlLine(path: string, value: unknown): void {
+  mkdirSync(dirname(path), { recursive: true });
+  appendFileSync(path, `${JSON.stringify(value)}\n`, 'utf8');
 }
 
 /** Write text only when the file is absent. */

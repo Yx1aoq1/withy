@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { writeFileSync, readFileSync } from 'atomically';
 import { ensureDir } from './fs.js';
 
 /** Read and JSON-parse a file. Throws with the path on missing/invalid input. */
@@ -14,9 +15,8 @@ export function readJsonFile(path: string): unknown {
   }
 }
 
-/** Write a value as pretty JSON (trailing newline), creating parent dirs. */
+/** Write a value as pretty JSON (trailing newline) atomically; creates parent dirs. */
 export function writeJsonFile(path: string, value: unknown): void {
-  mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
@@ -25,7 +25,7 @@ export function writeJsonFileIfMissing(path: string, value: unknown, createdPath
   if (existsSync(path)) {
     return false;
   }
-  ensureDir(dirname(path), createdPaths);
+  ensureDir(dirname(path), createdPaths); // track created dirs for installer rollback before the atomic write
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
   createdPaths.push(path);
   return true;

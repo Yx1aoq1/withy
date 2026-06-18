@@ -104,6 +104,7 @@ export {
   writeChecklist,
   readChecklist,
   readDeveloper,
+  findProjectByName,
   upsertProject,
   readProjects,
   writeWorkflow,
