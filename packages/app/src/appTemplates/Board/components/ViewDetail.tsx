@@ -4,15 +4,15 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Layer, PhaseStepper } from './detail';
-import type { BoardCard, ChecklistItemView } from '@/types/dashboard';
+import type { BoardCard } from '@/types/dashboard';
 
 interface ViewDetailProps {
   card: BoardCard;
   project: string;
 }
 
-// 右侧 view detail:任务三层进度概览(主体阶段 / 节点门禁 / 验收清单)。常驻不可关闭。
-// 验收项可勾选(PUT checklist);仅「已完成」任务可归档(POST archive,默认不改状态);写后 router.refresh + SSE 实时回灌。
+// 右侧 view detail:任务三层进度概览(主体阶段 / 节点门禁 / 实施计划)。常驻不可关闭。
+// 实施步骤只读展示;仅「已完成」任务可归档(POST archive,默认不改状态);写后 router.refresh + SSE 实时回灌。
 export function ViewDetail({ card, project }: ViewDetailProps) {
   const t = useTranslations('viewDetail');
   const tCommon = useTranslations('common');
@@ -20,21 +20,10 @@ export function ViewDetail({ card, project }: ViewDetailProps) {
   const [pending, startTransition] = useTransition();
   const [confirmArchive, setConfirmArchive] = useState(false);
 
-  const { done, total, items } = card.checklist;
+  const { done, total, unparsed, items } = card.implementation;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const query = `?project=${encodeURIComponent(project)}`;
   const canArchive = card.column === 'done';
-
-  const toggleItem = (item: ChecklistItemView) => {
-    startTransition(async () => {
-      await fetch(`/api/tasks/${encodeURIComponent(card.id)}/checklist${query}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId: item.id, done: !item.done }),
-      });
-      router.refresh();
-    });
-  };
 
   const archive = () => {
     startTransition(async () => {
@@ -80,7 +69,7 @@ export function ViewDetail({ card, project }: ViewDetailProps) {
           )}
         </Layer>
 
-        <Layer label={t('checklistLayer', { done, total })}>
+        <Layer label={t('implementationLayer', { done, total })}>
           <div className="mb-2.5 flex items-center gap-2.5">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full border border-line bg-paper-sunken">
               <span className="block h-full bg-teal" style={{ width: `${pct}%` }} />
@@ -90,24 +79,21 @@ export function ViewDetail({ card, project }: ViewDetailProps) {
             </span>
           </div>
           {items.length === 0 ? (
-            <p className="text-[12px] text-ink-faint">{t('checklistEmpty')}</p>
+            <p className="text-[12px] text-ink-faint">{t('implementationEmpty')}</p>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {items.map(item => (
-                <li key={item.id}>
-                  <label className="flex cursor-pointer items-start gap-2 text-[12.5px] leading-snug">
-                    <input
-                      type="checkbox"
-                      checked={item.done}
-                      disabled={pending}
-                      onChange={() => toggleItem(item)}
-                      className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[var(--teal)]"
-                    />
-                    <span className={item.done ? 'text-ink-faint line-through' : 'text-ink-soft'}>{item.text}</span>
-                  </label>
+                <li key={item.id} className="flex items-start gap-2 text-[12.5px] leading-snug">
+                  <span className={`mt-0.5 text-[11px] ${item.done ? 'text-teal' : 'text-ink-faint'}`}>
+                    {item.done ? '✓' : '○'}
+                  </span>
+                  <span className={item.done ? 'text-ink-faint line-through' : 'text-ink-soft'}>{item.text}</span>
                 </li>
               ))}
             </ul>
+          )}
+          {unparsed > 0 && (
+            <p className="mt-2 text-[11px] text-terracotta">{t('implementationUnparsed', { count: unparsed })}</p>
           )}
         </Layer>
 

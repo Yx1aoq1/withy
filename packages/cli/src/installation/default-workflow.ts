@@ -23,14 +23,21 @@ export const DEFAULT_WORKFLOW: Workflow = {
         { label: 'research', criteria: '只需调研、产出结论,不写生产代码', next: 'wrapup' },
       ],
     },
-    { id: 'brainstorm', type: 'skill', skill: 'brainstorm', phase: 'planning', next: 'grill-me' },
+    {
+      id: 'brainstorm',
+      type: 'skill',
+      skill: 'brainstorm',
+      phase: 'planning',
+      next: 'grill-me',
+      gate: { artifacts: ['prd.md', 'design.md', 'implement.md'] },
+    },
     {
       id: 'grill-me',
       type: 'skill',
       skill: 'grill-me',
       phase: 'planning',
       next: 'dev',
-      gate: { artifacts: ['design.md'], approval: true },
+      gate: { artifacts: ['prd.md', 'design.md', 'implement.md'], approval: true },
     },
     { id: 'dev', type: 'skill', skill: 'dev', phase: 'execute', next: 'check' },
     {

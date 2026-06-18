@@ -6,12 +6,18 @@ export type BoardColumn = 'todo' | 'doing' | 'done';
 // 主体阶段,对齐 core 的 PHASE_* 字面值
 export type Phase = 'planning' | 'execute' | 'finish';
 
-// 验收项视图模型(对齐 core ChecklistItem 的可展示字段)
-export interface ChecklistItemView {
+// 实施步骤视图模型(对齐 core ImplementationItem 的可展示字段)
+export interface ImplementationItemView {
   id: string;
   text: string;
   done: boolean;
-  node?: string;
+}
+
+export interface ImplementationView {
+  done: number;
+  total: number;
+  unparsed: number;
+  items: ImplementationItemView[];
 }
 
 // 看板卡:一条任务在看板上的展示所需
@@ -24,7 +30,7 @@ export interface BoardCard {
   phase: Phase | null;
   node: string | null;
   stuck: boolean;
-  checklist: { done: number; total: number; items: ChecklistItemView[] };
+  implementation: ImplementationView;
 }
 
 export interface BoardData {
@@ -36,7 +42,7 @@ export interface BoardData {
 // 归档任务的终态(对齐 core TaskStatus;web 归档只会产出 completed/cancelled,CLI 可归档其它态)
 export type ArchivedStatus = 'planning' | 'in_progress' | 'completed' | 'cancelled';
 
-// 归档卡:归档后任务的进度数据是冻结历史(只读),供归档详情回看「之前执行到哪、验收做了多少」
+// 归档卡:归档后任务的进度数据是冻结历史(只读),供归档详情回看「实施到了哪一步」
 export interface ArchivedCard {
   id: string;
   title: string;
@@ -48,7 +54,7 @@ export interface ArchivedCard {
   completedAt: string | null; // ISO 或 null(未完成即归档)
   phase: Phase | null; // 归档时所在阶段(state.currentNode → phaseOf)
   node: string | null; // 归档时所在节点
-  checklist: { done: number; total: number; items: ChecklistItemView[] }; // 冻结的验收清单(只读)
+  implementation: ImplementationView; // 冻结的实施计划进度(只读)
 }
 
 // 一个 YYYY-MM 月份桶下的归档任务

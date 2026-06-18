@@ -3,7 +3,7 @@ import { type Scope, archiveDir, taskDir } from './paths.js';
 import {
   clearCurrentTaskPointer,
   readCurrentTaskPointer,
-  readChecklist,
+  readImplementation,
   taskExists,
   readEvents,
   listTasks,
@@ -15,7 +15,7 @@ import { moveDir, nowIso } from './utils/index.js';
 // ── Task lifecycle + derived metrics ──────────────────────────────────────────
 // Task-level concerns that sit beside the workflow state machine (workflow/):
 // current-task resolution, archiving, and read-only metrics derived from events
-// and the checklist. No cursor transitions here — those live in workflow/.
+// and the implementation plan. No cursor transitions here — those live in workflow/.
 
 // ── Current-task resolution (harness §7.1) ───────────────────────────────────
 
@@ -70,9 +70,12 @@ export function isStuck(scope: Scope, taskId: string, node: string, threshold = 
   return countConsecutiveFailures(scope, taskId, node) >= threshold;
 }
 
-// ── Checklist progress (derived; web third tier + cross-task stats — §4.7) ─────
+// ── Implementation progress (derived; web third tier — §4.7) ─────────────────
 
-export function checklistProgress(scope: Scope, taskId: string): { done: number; total: number } {
-  const { items } = readChecklist(scope, taskId);
-  return { done: items.filter(item => item.done).length, total: items.length };
+export function implementationProgress(
+  scope: Scope,
+  taskId: string,
+): { done: number; total: number; unparsed: number } {
+  const { items, unparsed } = readImplementation(scope, taskId);
+  return { done: items.filter(item => item.done).length, total: items.length, unparsed };
 }

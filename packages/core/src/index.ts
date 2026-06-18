@@ -25,13 +25,11 @@ export {
   ProjectsRegistrySchema,
   ApprovalRecordSchema,
   ContextConfigSchema,
-  ChecklistItemSchema,
   WorkflowNodeSchema,
   ArtifactSpecSchema,
   DecisionRecordSchema,
   TaskPrioritySchema,
   TaskStatusSchema,
-  ChecklistSchema,
   ProjectRefSchema,
   SwitchNodeSchema,
   DeveloperSchema,
@@ -49,7 +47,7 @@ export {
 export type {
   ProjectsRegistry,
   ContextConfig,
-  ChecklistItem,
+  ImplementationItem,
   DecisionRecord,
   TaskPriority,
   WorkflowNode,
@@ -58,7 +56,7 @@ export type {
   TaskStatus,
   SwitchNode,
   Position,
-  Checklist,
+  ImplementationPlan,
   Developer,
   Approvals,
   SkillNode,
@@ -99,10 +97,7 @@ export {
   writeKnowledgeFile,
   readKnowledgeSource,
   readContextConfig,
-  addChecklistItem,
-  setChecklistItem,
-  writeChecklist,
-  readChecklist,
+  readImplementation,
   readDeveloper,
   findProjectByName,
   upsertProject,
@@ -123,7 +118,7 @@ export {
 } from './store.js';
 export type { ListTasksOptions, KnowledgeFile } from './store.js';
 
-export { countConsecutiveFailures, resolveCurrentTask, checklistProgress, archiveTask, isStuck } from './task.js';
+export { countConsecutiveFailures, resolveCurrentTask, implementationProgress, archiveTask, isStuck } from './task.js';
 export type { ArchiveOptions, CurrentTask } from './task.js';
 
 export {

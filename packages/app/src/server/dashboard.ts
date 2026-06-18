@@ -7,7 +7,7 @@ import {
   resolveGlobalScope,
   discoverSkills,
   readGitStatus,
-  readChecklist,
+  readImplementation,
   readDeveloper,
   readWorkflow,
   readProjects,
@@ -108,7 +108,7 @@ export function getIdentity(): Identity | null {
   return dev ? { name: dev.name, slug: dev.slug } : null;
 }
 
-// 看板视图模型:按列分组 + 每卡的阶段/节点/卡住/清单 + 是否归当前身份(mine 标记供客户端过滤)
+// 看板视图模型:按列分组 + 每卡的阶段/节点/卡住/实施进度 + 是否归当前身份(mine 标记供客户端过滤)
 export function getBoard(scope: Scope, identity: Identity | null): BoardData {
   const columns: Record<BoardColumn, BoardCard[]> = { todo: [], doing: [], done: [] };
 
@@ -152,7 +152,7 @@ export function getArchivedBoard(scope: Scope, identity: Identity | null): Archi
       completedAt: task.completedAt,
       phase,
       node,
-      checklist: readChecklistView(scope, task.id),
+      implementation: readImplementationView(scope, task.id),
     });
     byBucket.set(bucket, cards);
   }
@@ -173,7 +173,7 @@ function isOwnedBy(task: Task, identity: Identity): boolean {
   );
 }
 
-// 单卡视图模型;state/workflow/checklist 读取均容错,缺失时降级而非抛出
+// 单卡视图模型;state/workflow/implement 读取均容错,缺失时降级而非抛出
 function toCard(scope: Scope, task: Task, column: BoardColumn, identity: Identity | null): BoardCard {
   const { phase, node } = readPhaseNode(scope, task);
 
@@ -196,7 +196,7 @@ function toCard(scope: Scope, task: Task, column: BoardColumn, identity: Identit
     phase,
     node,
     stuck,
-    checklist: readChecklistView(scope, task.id),
+    implementation: readImplementationView(scope, task.id),
   };
 }
 
@@ -216,18 +216,23 @@ function readPhaseNode(scope: Scope, task: Task): { phase: Phase | null; node: s
   }
 }
 
-// 读验收清单视图模型;缺失或损坏降级为空。活跃卡与归档卡共用
-function readChecklistView(scope: Scope, id: string): BoardCard['checklist'] {
+// 读实施计划视图模型;缺失或损坏降级为空。活跃卡与归档卡共用
+function readImplementationView(scope: Scope, id: string): BoardCard['implementation'] {
   try {
-    const items = readChecklist(scope, id).items.map(item => ({
+    const implementation = readImplementation(scope, id);
+    const items = implementation.items.map(item => ({
       id: item.id,
       text: item.text,
       done: item.done,
-      node: item.node,
     }));
-    return { done: items.filter(item => item.done).length, total: items.length, items };
+    return {
+      done: items.filter(item => item.done).length,
+      total: items.length,
+      unparsed: implementation.unparsed,
+      items,
+    };
   } catch {
-    return { done: 0, total: 0, items: [] };
+    return { done: 0, total: 0, unparsed: 0, items: [] };
   }
 }
 

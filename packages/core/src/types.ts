@@ -166,21 +166,20 @@ export const TaskEventSchema = z.discriminatedUnion('type', [
 export type TaskEvent = z.infer<typeof TaskEventSchema>;
 
 // ──────────────────────────────────────────────────────────────────────────
-// Checklist (tasks/<id>/checklist.json) — core.md §4.7
-// Structured acceptance items: validated, web-renderable, never a hard gate.
+// Implementation plan (tasks/<id>/implement.md) — core.md §4.7
+// Markdown is agent-maintained; these are the best-effort parsed view types.
 // ──────────────────────────────────────────────────────────────────────────
 
-export const ChecklistItemSchema = z.object({
-  id: z.string(),
-  text: z.string(),
-  done: z.boolean().default(false),
-  // The node this item accepts (optional; lets web group by node).
-  node: z.string().optional(),
-});
-export type ChecklistItem = z.infer<typeof ChecklistItemSchema>;
+export interface ImplementationItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
 
-export const ChecklistSchema = z.object({ items: z.array(ChecklistItemSchema).default([]) });
-export type Checklist = z.infer<typeof ChecklistSchema>;
+export interface ImplementationPlan {
+  items: ImplementationItem[];
+  unparsed: number;
+}
 
 // ──────────────────────────────────────────────────────────────────────────
 // Context config (context.json) — core.md §4.5

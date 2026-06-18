@@ -185,7 +185,7 @@ export function stepWorkflow(wf: Workflow, state: State, action: WorkflowAction,
         blocked: reasons,
         needsBranch: true,
         branches: node.branches.map(toBranchView),
-        nextAction: 'ttur next --branch <label> --reason "..."',
+        nextAction: 'ttur next --branch <label> --reason "..." --json',
         events: [failEvent(nodeId, reasons)],
       };
     }

@@ -5,7 +5,12 @@ try {
   const program = await createCliProgram();
   await program.parseAsync();
 } catch (error) {
-  console.error(`Error: ${formatErrorMessage(error)}`);
+  const message = formatErrorMessage(error);
+  if (process.argv.includes('--json')) {
+    process.stdout.write(`${JSON.stringify({ ok: false, error: message })}\n`);
+  } else {
+    console.error(`Error: ${message}`);
+  }
   process.exit(1);
 }
 

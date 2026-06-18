@@ -32,7 +32,7 @@ const checksChecker: GateChecker = (gate, ctx) =>
   });
 
 const approvalChecker: GateChecker = (gate, ctx) =>
-  gate.approval && !ctx.isApproved() ? ['needs approval: run "ttur approve"'] : [];
+  gate.approval && !ctx.isApproved() ? ['needs approval: run "ttur approve --json"'] : [];
 
 const CHECKERS: GateChecker[] = [artifactsChecker, checksChecker, approvalChecker];
 

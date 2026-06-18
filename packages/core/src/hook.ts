@@ -32,13 +32,13 @@ export function renderSessionStart(scope: Scope): SessionStartResult {
   let currentNode = '';
 
   if (current === null) {
-    out.push('- NO ACTIVE TASK · Next-Action: describe your goal and I will run `ttur task create "<title>"`');
+    out.push('- NO ACTIVE TASK · Next-Action: describe your goal and I will run `ttur task start "<title>" --json`');
   } else if ('ambiguous' in current) {
     out.push(`- AMBIGUOUS: multiple open tasks (${current.ambiguous.join(', ')})`);
-    out.push('- Next-Action: `ttur task start <id>` to pick one, or create a new task');
+    out.push('- Next-Action: `ttur task start <id> --json` to pick one, or start a new task');
   } else if ('stale' in current) {
     out.push(`- STALE POINTER: current-task points at "${current.stale}" which no longer exists`);
-    out.push('- Next-Action: `ttur task start <id>` to reset');
+    out.push('- Next-Action: `ttur task start <id> --json` to reset');
   } else {
     taskId = current.taskId;
     const task = readTask(scope, taskId);
@@ -58,9 +58,9 @@ export function renderSessionStart(scope: Scope): SessionStartResult {
       for (const b of node.branches) {
         out.push(`    · ${b.label}${b.default ? ' (default)' : ''}${b.criteria ? ` — ${b.criteria}` : ''}`);
       }
-      out.push(`- Next-Action: \`ttur next --branch <label> --reason "..."\``);
+      out.push(`- Next-Action: \`ttur next --branch <label> --reason "..." --json\``);
     } else {
-      out.push(`- Next-Action: \`ttur next\``);
+      out.push(`- Next-Action: \`ttur next --json\``);
     }
   }
 

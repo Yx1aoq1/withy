@@ -14,7 +14,7 @@ export function TaskCard({ card, selected, onSelect }: TaskCardProps) {
   const t = useTranslations('taskCard');
   const tPhase = useTranslations('phase');
   const meta = card.phase ? PHASE_META[card.phase] : null;
-  const { done, total } = card.checklist;
+  const { done, total } = card.implementation;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   // accent = 左侧色条颜色:卡住=terracotta,否则阶段色,无阶段=line。选中边框/ring 复用同色,与色条一致。

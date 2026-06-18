@@ -9,12 +9,12 @@ interface ArchivedDetailProps {
   card: ArchivedCard;
 }
 
-// 归档只读详情:回看任务归档时的冻结进度 —— 主体阶段(步进器)、归档时所在节点、验收清单(只读)、生命周期时间。
+// 归档只读详情:回看任务归档时的冻结进度 —— 主体阶段(步进器)、归档时所在节点、实施计划(只读)、生命周期时间。
 // 进度数据经 core 的归档回退按 id 读出;本面板无任何写操作(不勾选、不归档)。
 export function ArchivedDetail({ card }: ArchivedDetailProps) {
   const t = useTranslations('archived');
   const meta = ARCHIVED_STATUS_META[card.finalStatus];
-  const { done, total, items } = card.checklist;
+  const { done, total, unparsed, items } = card.implementation;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return (
@@ -46,7 +46,7 @@ export function ArchivedDetail({ card }: ArchivedDetailProps) {
           )}
         </Layer>
 
-        <Layer label={t('checklistLabel', { done, total })}>
+        <Layer label={t('implementationLabel', { done, total })}>
           <div className="mb-2.5 flex items-center gap-2.5">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full border border-line bg-paper-sunken">
               <span className="block h-full bg-teal" style={{ width: `${pct}%` }} />
@@ -56,7 +56,7 @@ export function ArchivedDetail({ card }: ArchivedDetailProps) {
             </span>
           </div>
           {items.length === 0 ? (
-            <p className="text-[12px] text-ink-faint">{t('checklistEmpty')}</p>
+            <p className="text-[12px] text-ink-faint">{t('implementationEmpty')}</p>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {items.map(item => (
@@ -68,6 +68,9 @@ export function ArchivedDetail({ card }: ArchivedDetailProps) {
                 </li>
               ))}
             </ul>
+          )}
+          {unparsed > 0 && (
+            <p className="mt-2 text-[11px] text-terracotta">{t('implementationUnparsed', { count: unparsed })}</p>
           )}
         </Layer>
 

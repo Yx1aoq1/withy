@@ -17,7 +17,7 @@ import {
 import {
   type ProjectsRegistry,
   type ContextConfig,
-  type Checklist,
+  type ImplementationPlan,
   type Developer,
   type ProjectRef,
   type TaskEvent,
@@ -26,7 +26,6 @@ import {
   type Task,
   ProjectsRegistrySchema,
   ContextConfigSchema,
-  ChecklistSchema,
   DeveloperSchema,
   TaskEventSchema,
   WorkflowSchema,
@@ -65,7 +64,7 @@ function readValidated<S extends z.ZodTypeAny>(path: string, schema: S, label: s
 // ── Tasks ──────────────────────────────────────────────────────────────────
 
 // 归档后任务目录会移入 archive/YYYY-MM/<id>/(task.ts archiveTask)。按 id 读取时优先 live 路径,
-// 缺失则回退遍历归档桶,让 web 等只读消费方能按 id 读到已归档任务的 task/state/checklist/events。
+// 缺失则回退遍历归档桶,让 web 等只读消费方能按 id 读到已归档任务的 task/state/implement/events。
 // 写入始终用 live taskPath —— 不回退,杜绝往归档任务写盘。
 function taskReadPath(scope: Scope, id: string, rel: string): string {
   const live = taskPath(scope, id, rel);
@@ -196,48 +195,23 @@ export function isApproved(scope: Scope, taskId: string, node: string): boolean 
   return Boolean(readState(scope, taskId).approvals[node]);
 }
 
-// ── Checklist (tasks/<id>/checklist.json — structured acceptance, §4.7) ───────
+// ── Implementation plan (tasks/<id>/implement.md — agent-maintained, §4.7) ──
 
-export function readChecklist(scope: Scope, taskId: string): Checklist {
-  const file = taskReadPath(scope, taskId, 'checklist.json');
-  if (!existsSync(file)) return ChecklistSchema.parse({});
-  return readValidated(file, ChecklistSchema, 'checklist.json');
-}
+export function readImplementation(scope: Scope, taskId: string): ImplementationPlan {
+  const content = readTextFileIfExists(taskReadPath(scope, taskId, 'implement.md'));
+  if (content === null) return { items: [], unparsed: 0 };
 
-export function writeChecklist(scope: Scope, taskId: string, checklist: Checklist): void {
-  writeJsonFile(taskPath(scope, taskId, 'checklist.json'), checklist);
-}
-
-/** Append an acceptance item; ids are monotonic `ac-<n>` (no delete command). */
-export function addChecklistItem(
-  scope: Scope,
-  taskId: string,
-  text: string,
-  node?: string,
-): { checklist: Checklist; id: string } {
-  const checklist = readChecklist(scope, taskId);
-  const id = `ac-${nextChecklistOrdinal(checklist)}`;
-  checklist.items.push({ id, text, done: false, node });
-  writeChecklist(scope, taskId, checklist);
-  return { checklist, id };
-}
-
-export function setChecklistItem(scope: Scope, taskId: string, itemId: string, done: boolean): Checklist {
-  const checklist = readChecklist(scope, taskId);
-  const item = checklist.items.find(entry => entry.id === itemId);
-  if (!item) throw new StoreError(`checklist item not found: ${itemId}`);
-  item.done = done;
-  writeChecklist(scope, taskId, checklist);
-  return checklist;
-}
-
-function nextChecklistOrdinal(checklist: Checklist): number {
-  let max = 0;
-  for (const item of checklist.items) {
-    const match = /^ac-(\d+)$/.exec(item.id);
-    if (match) max = Math.max(max, Number(match[1]));
+  const items: ImplementationPlan['items'] = [];
+  let unparsed = 0;
+  for (const [index, line] of content.split('\n').entries()) {
+    const checkbox = /^\s*[-*+]\s+\[([ xX])\]\s+(.+?)\s*$/.exec(line);
+    if (checkbox) {
+      items.push({ id: `line-${index + 1}`, text: checkbox[2], done: checkbox[1].toLowerCase() === 'x' });
+    } else if (/^\s*[-*+]\s+/.test(line)) {
+      unparsed += 1;
+    }
   }
-  return max + 1;
+  return { items, unparsed };
 }
 
 // ── Context config ───────────────────────────────────────────────────────────

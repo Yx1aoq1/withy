@@ -20,14 +20,7 @@ import type { Command } from 'commander';
 import { emit, makeTaskId, requireProjectScope, resolveTaskId } from '../harness/runtime.js';
 
 export default function registerTaskCommand(program: Command): void {
-  const task = program.command('task').description('Create and manage tasks');
-
-  task
-    .command('create <title>')
-    .description('Create a task (agent runs this when you describe a goal)')
-    .option('-w, --workflow <id>', 'Workflow id', 'default')
-    .option('-a, --assignee <slug>', 'Assignee slug (defaults to current developer)')
-    .action(runCreate);
+  const task = program.command('task').description('Start and manage tasks');
 
   task
     .command('list')
@@ -40,9 +33,12 @@ export default function registerTaskCommand(program: Command): void {
 
   task.command('status [task]').description('Show a task with its current node and phase').action(runStatus);
 
-  task.command('start <task>').description('Set the current-task pointer').action(runStart);
-
-  task.command('assign <task> <slug>').description('Reassign a task (creator unchanged)').action(runAssign);
+  task
+    .command('start <title-or-id>')
+    .description('Focus an existing task id, or create a task from a new title')
+    .option('-w, --workflow <id>', 'Workflow id for a new task', 'default')
+    .option('-a, --assignee <slug>', 'Assignee slug for a new task (defaults to current developer)')
+    .action(runStart);
 
   task
     .command('archive <task>')
@@ -51,13 +47,18 @@ export default function registerTaskCommand(program: Command): void {
     .action(runArchive);
 }
 
-interface CreateOptions {
+interface StartOptions {
   workflow: string;
   assignee?: string;
 }
 
-function runCreate(title: string, options: CreateOptions): void {
+function runStart(titleOrId: string, options: StartOptions): void {
   const scope = requireProjectScope();
+  if (taskExists(scope, titleOrId)) {
+    writeCurrentTaskPointer(scope, titleOrId);
+    emit({ ok: true, task: titleOrId, current: true });
+  }
+
   const developer = readDeveloper(scope);
   const assignee = options.assignee ?? developer?.slug;
   if (!assignee) {
@@ -84,7 +85,7 @@ function runCreate(title: string, options: CreateOptions): void {
   }
   const warnings = issues.filter(issue => issue.level === 'warning').map(issue => issue.message);
 
-  const id = makeTaskId(title);
+  const id = makeTaskId(titleOrId);
   if (taskExists(scope, id)) {
     emit({ ok: false, error: `task already exists: ${id}` }, 1);
   }
@@ -93,7 +94,7 @@ function runCreate(title: string, options: CreateOptions): void {
   const state = { ...initialState(workflow), taskId: id };
   const task: Task = {
     id,
-    title,
+    title: titleOrId,
     workflow: workflow.id,
     status: deriveStatus(workflow, state.currentNode),
     creator,
@@ -109,7 +110,7 @@ function runCreate(title: string, options: CreateOptions): void {
   writeState(scope, state);
   writeCurrentTaskPointer(scope, id);
 
-  emit({ ok: true, task: id, status: task.status, node: state.currentNode, warnings });
+  emit({ ok: true, task: id, created: true, status: task.status, node: state.currentNode, warnings });
 }
 
 interface ListOptions {
@@ -148,21 +149,6 @@ function runStatus(taskArg: string | undefined): void {
     completed: state.completedNodes,
     decisions: state.decisions,
   });
-}
-
-function runStart(taskArg: string): void {
-  const scope = requireProjectScope();
-  if (!taskExists(scope, taskArg)) emit({ ok: false, error: `task not found: ${taskArg}` }, 1);
-  writeCurrentTaskPointer(scope, taskArg);
-  emit({ ok: true, task: taskArg, current: true });
-}
-
-function runAssign(taskArg: string, slug: string): void {
-  const scope = requireProjectScope();
-  if (!taskExists(scope, taskArg)) emit({ ok: false, error: `task not found: ${taskArg}` }, 1);
-  const task = readTask(scope, taskArg);
-  writeTask(scope, { ...task, assignee: slug });
-  emit({ ok: true, task: taskArg, assignee: slug });
 }
 
 interface ArchiveOptions {
