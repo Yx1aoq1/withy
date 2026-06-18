@@ -13,13 +13,14 @@
 
 ---
 
-## 1. 文档地图(7 份)
+## 1. 文档地图(8 份)
 
 | 文档                           | 讲什么                                                                                                                                     | 何时读                                                             |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
 | [core.md](./core.md)           | **事实源**:`@tuteur/core`、双层数据格式、用户模型、**阶段 workflow/state**、events、InitConfig、归档、**skill 发现**、数据契约         | 读写 `.tuteur/`、类型、门禁、全局/项目、用户、初始化、归档、契约时 |
 | [cli.md](./cli.md)             | `ttur` 命令(`next`/`task`/`rewind`/`approve`/`hook`,默认 JSON 输出)、数据注册表+per-agent configurator+通用层(hook 走模板树)、模板更新 | 改命令、加 agent 平台、做 hook 入口、skill 发现时                  |
 | [harness.md](./harness.md)     | 节点门禁(gate)、**switch 靠 agent 判断**、上下文流转、hook 三阶段注入、**当前任务定位 + 子 agent 约定**、用户扩展                          | 做门禁、分支、写 hook、定注入、定位任务时                          |
+| [harness-flow.md](./harness-flow.md) | **端到端总览**:从全局/项目初始化、会话注入、任务分支、三阶段执行到完成/归档，并标注每阶段产物与异常恢复路径 | 开始编写 workflow skill、产物模板或做整链路验收前 |
 | [knowledge.md](./knowledge.md) | **知识库**:全局/项目同构 `knowledge/`(karpathy LLM Wiki 三层)、条目 schema、ingest/query/lint、注入接入(`context.json` 分层)               | 做知识库、上下文注入内容、`tuteur-knowledge` skill、注入编排时     |
 | [web.md](./web.md)             | 多项目+全局 dashboard、**workflow 画布编辑**、事件时间线、知识库管理+注入编排器、页面、API、web 触发 init                                  | 做 UI、画布、注入管理、加 API 时                                   |
 | [design.md](./design.md)       | **web 视觉规范**:视觉主题(砚墨)、配色 token、字号、间距、组件样式、排版规则、双主题机制、备选主题存档                                      | 调样式、套主题、组件视觉契约、改 globals.css 时                    |
