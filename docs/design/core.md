@@ -188,16 +188,16 @@ workflow 定义是静态的,state 是动态游标,由门禁维护:
 }
 ```
 
-phase 不进 state,**纯派生**:节点的阶段归属是它在 workflow 里的容器(planning/execute/finish 三个固定框,§4.3),core 导出 `phaseOf(wf, nodeId)` 查容器成员;hook/complete/task 三处共用此函数,不各算各的。`task.status` 由 `phaseOf(currentNode)` 驱动(planning 框→planning;execute/finish 框→in_progress;`currentNode==null`→completed;阶段框之前的分诊节点不改 status,保持初始 planning)。门禁失败不改变 state——停留原节点修复后再次 complete 即返工(harness §2.4);switch 判错用 `ttur rewind` 退回(harness §3.1),并连带清掉被退回节点及其下游的 `approvals`。**approval 并入 state(不单独存 `approvals.json`)**:它是门禁输入,和 `decisions` 一样属当前权威态;`ttur approve` 写 `state.approvals` 并追加一条 `approval` 审计事件(§4.4)。workflow 校验拒绝带环图,state 无迭代轮次概念。
+phase 不进 state,**纯派生**:节点的阶段归属是它在 workflow 里的 `phase` 字段(planning/execute/finish 之一,§4.3;画布上由所在软泳道写入,web §3.3),core 导出 `phaseOf(wf, nodeId)` 读该字段;hook/complete/task 三处共用此函数,不各算各的。`task.status` 由 `phaseOf(currentNode)` 驱动(planning→planning;execute/finish→in_progress;`currentNode==null`→completed;未绑定阶段的节点(`phase:null`)不改 status,保持初始 planning)。门禁失败不改变 state——停留原节点修复后再次 complete 即返工(harness §2.4);switch 判错用 `ttur rewind` 退回(harness §3.1),并连带清掉被退回节点及其下游的 `approvals`。**approval 并入 state(不单独存 `approvals.json`)**:它是门禁输入,和 `decisions` 一样属当前权威态;`ttur approve` 写 `state.approvals` 并追加一条 `approval` 审计事件(§4.4)。workflow 校验拒绝带环图,state 无迭代轮次概念。
 
-### 4.3 workflow.json(节点图:固定阶段容器 + 两类节点)
+### 4.3 workflow.json(节点图:固定三阶段 + 两类节点)
 
-workflow 由**三个固定的阶段容器**(planning / 执行 / 收尾,不可增删,§7.3)+ 容器内/容器前的**两类节点**组成。两类节点:
+workflow 由**三个固定的阶段**(planning / 执行 / 收尾,不可增删,§7.3)+ 阶段内/阶段前的**两类节点**组成。两类节点:
 
 - **skill 节点**:引用一个 skill(指路牌)。语义=agent 走到这儿先读 `skill` 指向的 skill、按它做完,再 `ttur next` 尝试推进。**单出**(`next`),入度不限。可选挂门禁 `gate`。
 - **switch 节点**:岔路口。**靠 agent 判断**走哪条(语义判断,表达不成布尔式),每条分支自带 `criteria` 判断说明。agent 走到 switch **停下**,先用 `ttur next` 查看合法分支,判定后 `ttur next --branch <label> --reason "..."`;系统记 `state.decisions` 并路由(harness §2.5/§3)。必须有且仅有一个 `default` 兜底分支。
 
-图必须**无环**(返工=停留原节点重试,harness §2.4;switch 判错用 `ttur rewind` 退回,harness §3.1;validate 拒绝回边)。出边内嵌为 `next`/`branches`,省去独立 `edges[]`。`entry` 是全局入口(可以是阶段框之前的分诊节点);`next:null` 是终点。每个节点的阶段归属由它所在容器决定(画布上拖进哪个框);`phase:null` = 阶段框之前的分诊区。
+图必须**无环**(返工=停留原节点重试,harness §2.4;switch 判错用 `ttur rewind` 退回,harness §3.1;validate 拒绝回边)。出边内嵌为 `next`/`branches`,省去独立 `edges[]`。`entry` 是全局入口(可指任意节点);`next:null` 是终点。**阶段归属是节点上的字段 `phase`**(驱动 task.status;边的合法性另由「阶段单调」校验);画布上由所在软泳道在 drop 时写入(web §3.3),`phase:null` = 未绑定阶段(画布归入第一条泳道「规划」显示,不改 task.status)。节点另带画布坐标 `pos:{x,y}`(自由布局,纯展示、不参与校验)。**画布不为 placement 加校验** —— 入口落在哪阶段、空阶段、跳过整段都按用户摆放接受(web §3.3)。
 
 ```jsonc
 {
@@ -206,13 +206,13 @@ workflow 由**三个固定的阶段容器**(planning / 执行 / 收尾,不可增
   "version": "0.3.0",
   "entry": "triage",
   "phases": [
-    // 固定有序骨架:驱动 task.status + web 进度条/画布三框
-    { "id": "planning", "label": "规划", "entry": "brainstorm" }, // entry=从框外进入该阶段的唯一落点(单入校验)
+    // 固定有序骨架:驱动 task.status + web 进度条/画布泳道
+    { "id": "planning", "label": "规划", "entry": "brainstorm" }, // entry=从阶段外进入该阶段的唯一落点(单入校验)
     { "id": "execute", "label": "执行", "entry": "dev" },
     { "id": "finish", "label": "收尾", "entry": "wrapup" },
   ],
   "nodes": [
-    // 分诊区(phase:null,画在三框左侧)
+    // phase:null,未绑定阶段(画布归入「规划」带显示)
     {
       "id": "triage",
       "type": "switch",
@@ -222,7 +222,7 @@ workflow 由**三个固定的阶段容器**(planning / 执行 / 收尾,不可增
         { "label": "research", "criteria": "只需调研、产出结论,不写生产代码", "next": "wrapup" },
       ],
     },
-    // planning 框
+    // planning 阶段
     { "id": "brainstorm", "type": "skill", "skill": "brainstorm", "phase": "planning", "next": "grill-me" },
     {
       "id": "grill-me",
@@ -232,7 +232,7 @@ workflow 由**三个固定的阶段容器**(planning / 执行 / 收尾,不可增
       "next": "dev",
       "gate": { "artifacts": ["design.md"], "approval": true },
     },
-    // execute 框
+    // execute 阶段
     { "id": "dev", "type": "skill", "skill": "dev", "phase": "execute", "next": "check" },
     {
       "id": "check",
@@ -242,7 +242,7 @@ workflow 由**三个固定的阶段容器**(planning / 执行 / 收尾,不可增
       "next": "wrapup",
       "gate": { "checks": ["npm test"] },
     },
-    // finish 框
+    // finish 阶段
     { "id": "wrapup", "type": "skill", "skill": "finish", "phase": "finish", "next": null },
   ],
 }
@@ -256,7 +256,8 @@ workflow 由**三个固定的阶段容器**(planning / 执行 / 收尾,不可增
 | `branches` | switch      | `[{label, criteria, next} \| {label, criteria, default:true, next}]`;**必须有且仅有一个 default**(validate 强制)                                               |
 | `criteria` | switch 分支 | 该分支的判断说明(给 agent 看,据此选路)                                                                                                                         |
 | `gate`     | skill       | **可选**门禁:`{ artifacts?: ArtifactSpec[], checks?: string[], approval?: boolean }`(§4.3.1;`ArtifactSpec`=`string \| {path,title?,template?}`);大多数节点不写 |
-| `phase`    | 全部        | 阶段归属(=画布上所在容器);`null`=分诊区,不改 task.status                                                                                                       |
+| `phase`    | 全部        | 阶段归属(驱动 task.status;画布上由所在软泳道写入,web §3.3);`null`=未绑定阶段,不改 task.status(画布归入「规划」带显示)                                                                                                       |
+| `pos`      | 全部        | 画布坐标 `{x,y}`(编辑器维护,纯展示、不参与校验;`x` 自由、`y` 为所在泳道内相对带顶的偏移,见 web §3.3)                          |
 
 **switch 不再自动求值、不再读 signal**:harness 走到 switch **停下**,把各分支 `criteria` 输出给 agent。agent 判定后用 `ttur next --branch <label> --reason` 报出;非法分支/缺 `--branch` → 门禁失败(exit 2)停下重判;判定记 `state.decisions[node]={branch,reason,by,at}` + 一条事件(§4.4)。一个 workflow 含多个 switch 互不影响(各记各的 nodeId)。原 `decision`/`signal`/`decision.json#/...`(JSON Pointer)/"三类信号源"模型**已废弃**(harness §2.5)。
 
@@ -424,7 +425,7 @@ approveCurrentNode(scope, taskId, by): State; // 写 state.approvals[currentNode
 resolvePlannedContext(scope, taskId, nodeId): PlannedEntry[];  // 合并 global injectByDefault→项目 default→node(knowledge.md §7);每项带 {id, mode:'full'|'index', ...}(§4.5)
 resolveSkillRef(scope, skill): { path: string };        // 名→具体 skill;解析不到则抛错(harness §5,缺则报错)
 resolveCurrentTask(scope, explicit?): string | null;    // --task > 指针 > 唯一未完成兜底;多个未完成→AMBIGUOUS(harness §7.1)
-phaseOf(wf, nodeId): string | null;           // 节点的阶段归属(容器成员);驱动 task.status(hook/complete/task 共用)
+phaseOf(wf, nodeId): string | null;           // 节点的阶段归属(读 node.phase);驱动 task.status(hook/complete/task 共用)
 checklistProgress(scope, taskId): { done: number; total: number };   // 派生进度;web 第三层 + 跨任务统计(§4.7)
 archiveTask(scope, taskId, { markCancelled? }): void;   // §9
 export interface NextResult { ok: boolean; exitCode: 0 | 2; message?: string; state?: State; }
@@ -436,7 +437,7 @@ export interface NextResult { ok: boolean; exitCode: 0 | 2; message?: string; st
 - **skill 节点**:核对 `gate`(artifacts 存在+非空 / checks 退出 0 / approval 已写),全过则 `advanceWorkflow` 沿 `next` 推进。
 - **switch 节点**:无 `opts.branch` 时不推进,返回合法分支与 `ttur next --branch <label> --reason "..."` 提示;有 branch 时要求它是合法分支(否则 exit 2),记 `state.decisions[node]={branch,reason,by,at}` + `decision` 事件,沿该分支 `next` 推进。
 
-`stepWorkflow`(interpret)把一个 Tuteur action 映射成 engine 事件,交 `engine.send` 沿匹配的 transition 走一步:skill 节点发 `advance`(gate 编译成 guard);switch 节点发分支标签,**无匹配事件即停下**(等 agent 判定),到终点(`target:null`)置 `currentNode=null`——**switch 不再由 harness 自动求值**(原 `evaluateDecision`/`readSignal`/signal 三源已废弃,harness §2.5/§3)。**门禁失败不改变 state**;每次推进尝试(成败)都 `appendEvent`(§4.4)。成功时返回的 state 用于拼装「下一节点接力 JSON」(harness §2.3)。`phaseOf` 在游标落入新阶段容器时驱动 `task.status` 翻转。纯函数 + 单测,确定性核心(K4)。
+`stepWorkflow`(interpret)把一个 Tuteur action 映射成 engine 事件,交 `engine.send` 沿匹配的 transition 走一步:skill 节点发 `advance`(gate 编译成 guard);switch 节点发分支标签,**无匹配事件即停下**(等 agent 判定),到终点(`target:null`)置 `currentNode=null`——**switch 不再由 harness 自动求值**(原 `evaluateDecision`/`readSignal`/signal 三源已废弃,harness §2.5/§3)。**门禁失败不改变 state**;每次推进尝试(成败)都 `appendEvent`(§4.4)。成功时返回的 state 用于拼装「下一节点接力 JSON」(harness §2.3)。`phaseOf` 在游标落入新阶段时驱动 `task.status` 翻转。纯函数 + 单测,确定性核心(K4)。
 
 ---
 
