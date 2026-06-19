@@ -14,6 +14,7 @@ export function TaskCard({ card, selected, onSelect }: TaskCardProps) {
   const t = useTranslations('taskCard');
   const tPhase = useTranslations('phase');
   const meta = card.phase ? PHASE_META[card.phase] : null;
+  const isDone = card.column === 'done';
   const { done, total } = card.implementation;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
@@ -39,6 +40,10 @@ export function TaskCard({ card, selected, onSelect }: TaskCardProps) {
             <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
             {tPhase(card.phase!)}
           </span>
+        ) : isDone ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-bg px-2.5 py-[3px] text-[11px] font-bold text-teal">
+            {t('done')}
+          </span>
         ) : (
           <span className="text-[11px] font-semibold text-ink-faint">{t('notStarted')}</span>
         )}
@@ -55,11 +60,7 @@ export function TaskCard({ card, selected, onSelect }: TaskCardProps) {
             {t('node')} <b className="text-ink">{card.node}</b>
           </span>
         )}
-        {card.stuck ? (
-          <Badge tone="fail">{t('stuck')}</Badge>
-        ) : (
-          card.column === 'done' && <Badge tone="ok">{t('done')}</Badge>
-        )}
+        {card.stuck && <Badge tone="fail">{t('stuck')}</Badge>}
       </div>
 
       <div className="flex items-center gap-2.5">

@@ -140,7 +140,7 @@ export function getArchivedBoard(scope: Scope, identity: Identity | null): Archi
     if (!task.archivedAt) continue;
     const bucket = task.archivedAt.slice(0, 7); // YYYY-MM
     const cards = byBucket.get(bucket) ?? [];
-    const { phase, node } = readPhaseNode(scope, task);
+    const { phase, node } = readArchivedPhaseNode(scope, task);
     cards.push({
       id: task.id,
       title: task.title,
@@ -205,6 +205,23 @@ function toCard(scope: Scope, task: Task, column: BoardColumn, identity: Identit
 function readPhaseNode(scope: Scope, task: Task): { phase: Phase | null; node: string | null } {
   try {
     const node = readState(scope, task.id).currentNode;
+    if (!node) return { phase: null, node: null };
+    try {
+      return { phase: phaseOf(readWorkflow(scope, task.workflow), node) as Phase | null, node };
+    } catch {
+      return { phase: null, node };
+    }
+  } catch {
+    return { phase: null, node: null };
+  }
+}
+
+// 归档卡专用:已完成任务的游标已跑过终点(currentNode=null),此处回退到最后一个完成节点,
+// 使「归档时所在节点」显示它真正收束于哪个节点(如 finish)而非空兜底。
+function readArchivedPhaseNode(scope: Scope, task: Task): { phase: Phase | null; node: string | null } {
+  try {
+    const state = readState(scope, task.id);
+    const node = state.currentNode ?? state.completedNodes.at(-1) ?? null;
     if (!node) return { phase: null, node: null };
     try {
       return { phase: phaseOf(readWorkflow(scope, task.workflow), node) as Phase | null, node };
