@@ -1,5 +1,5 @@
 ---
-name: { { SKILL_NAME } }
+name: {{SKILL_NAME}}
 description: Maintain the {{PRODUCT_NAME}} knowledge base — ingest sources into a cross-linked wiki, answer questions from it, and keep it consistent. Invoked on demand to record a durable lesson or manage the base; you choose what goes in, the skill does the bookkeeping.
 ---
 

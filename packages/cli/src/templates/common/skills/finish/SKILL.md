@@ -1,5 +1,5 @@
 ---
-name: { { SKILL_NAME } }
+name: {{SKILL_NAME}}
 description: Wrap up a {{PRODUCT_NAME}} workflow — reconcile the working tree, capture durable lessons into the knowledge base, then complete and archive the task. Produces no artifact of its own; runs on whatever is in the working tree.
 ---
 

@@ -179,9 +179,14 @@ describe('schema queries', () => {
   });
 
   it('describeNext renders skill / switch / done', () => {
-    expect(describeNext(WF, state('dev'))).toMatchObject({ node: 'dev', type: 'skill', skill: 'dev' });
+    expect(describeNext(WF, state('dev'))).toMatchObject({ node: 'dev', type: 'skill', skill: 'withy-dev' });
     expect(describeNext(WF, state('triage'))).toMatchObject({ node: 'triage', type: 'switch' });
     expect(describeNext(WF, state(null))).toMatchObject({ node: null });
+  });
+
+  it('describeNext normalizes the relayed skill name idempotently (no double prefix)', () => {
+    const wf = { ...WF, nodes: [...WF.nodes, { id: 'real', type: 'skill' as const, skill: 'withy-dev', next: null }] };
+    expect(describeNext(wf, state('real'))).toMatchObject({ skill: 'withy-dev' });
   });
 
   it('nodeById finds nodes and returns undefined for misses', () => {

@@ -1,4 +1,5 @@
-import { PHASE_PLANNING } from '../constants.js';
+import { getBundledSkillName, PHASE_PLANNING } from '../constants.js';
+import { logicalSkillName } from '../skills.js';
 import { nowIso } from '../utils/index.js';
 import { rewind, send } from './engine.js';
 import type { Cursor, GuardReport, MachineDef } from './engine.js';
@@ -228,5 +229,13 @@ export function describeNext(wf: Workflow, state: State): NextStep {
   if (node.type === 'switch') {
     return { node: node.id, type: 'switch', phase: node.phase ?? null, branches: node.branches.map(toBranchView) };
   }
-  return { node: node.id, type: 'skill', skill: node.skill, phase: node.phase ?? null };
+  // Relay the agent-invocable skill name. Workflows now store the real installed
+  // name (e.g. `withy-dev`); normalize idempotently so legacy logical names
+  // (`dev`) still resolve and a real name never double-prefixes.
+  return {
+    node: node.id,
+    type: 'skill',
+    skill: getBundledSkillName(logicalSkillName(node.skill)),
+    phase: node.phase ?? null,
+  };
 }

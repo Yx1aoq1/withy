@@ -7,10 +7,10 @@ import { readTextFile, isDirectory } from './utils/fs.js';
 import type { Scope } from './paths.js';
 
 export interface DiscoveredSkill {
-  name: string; // logical name (withy- prefix stripped)
+  name: string; // real installed skill directory name (e.g. `withy-dev`)
   description?: string;
   source: 'project' | 'global';
-  /** Directories this logical skill was found in (one logical skill may be installed in several tools). */
+  /** Directories this skill was found in (one skill may be installed in several tools). */
   paths: string[];
 }
 
@@ -21,9 +21,10 @@ export function logicalSkillName(dirName: string): string {
 }
 
 /**
- * Discover skills across project + agent home dirs, deduped by logical name.
- * Skill directories come from the single agent registry (core §5.1), so the
- * set of scanned locations is maintained in exactly one place.
+ * Discover skills across project + agent home dirs, deduped by their real
+ * installed directory name. Skill directories come from the single agent
+ * registry (core §5.1), so the set of scanned locations is maintained in
+ * exactly one place. Workflows reference and store this real name verbatim.
  */
 export function discoverSkills(scope: Scope): DiscoveredSkill[] {
   const byName = new Map<string, DiscoveredSkill>();
@@ -36,7 +37,7 @@ export function discoverSkills(scope: Scope): DiscoveredSkill[] {
         if (!entry.isDirectory()) continue;
         const skillFile = resolve(root, entry.name, 'SKILL.md');
         if (!existsSync(skillFile)) continue;
-        const name = logicalSkillName(entry.name);
+        const name = entry.name;
         const existing = byName.get(name);
         if (existing) {
           existing.paths.push(resolve(root, entry.name));

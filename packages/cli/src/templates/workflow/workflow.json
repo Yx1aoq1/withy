@@ -12,7 +12,7 @@
     {
       "id": "brainstorm",
       "type": "skill",
-      "skill": "brainstorm",
+      "skill": "withy-brainstorm",
       "phase": "planning",
       "next": "grill-me",
       "gate": { "artifacts": ["prd.md", "design.md", "implement.md"] }
@@ -20,19 +20,19 @@
     {
       "id": "grill-me",
       "type": "skill",
-      "skill": "grill-me",
+      "skill": "withy-grill-me",
       "phase": "planning",
       "next": "dev",
       "gate": { "artifacts": ["prd.md", "design.md", "implement.md"], "approval": true }
     },
-    { "id": "dev", "type": "skill", "skill": "dev", "phase": "execute", "next": "check" },
+    { "id": "dev", "type": "skill", "skill": "withy-dev", "phase": "execute", "next": "check" },
     {
       "id": "check",
       "type": "skill",
-      "skill": "check",
+      "skill": "withy-check",
       "phase": "execute",
       "next": "finish"
     },
-    { "id": "finish", "type": "skill", "skill": "finish", "phase": "finish", "next": null }
+    { "id": "finish", "type": "skill", "skill": "withy-finish", "phase": "finish", "next": null }
   ]
 }

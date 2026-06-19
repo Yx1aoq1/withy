@@ -153,7 +153,7 @@ export interface CanvasWorkflow {
   nodes: CanvasNode[];
 }
 
-// 右栏可拖入画布的 skill(discoverSkills 去重后的逻辑名)
+// 右栏可拖入画布的 skill(discoverSkills 去重后的真实安装名)
 export interface CanvasSkill {
   name: string;
   description?: string;

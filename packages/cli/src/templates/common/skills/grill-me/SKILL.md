@@ -1,5 +1,5 @@
 ---
-name: { { SKILL_NAME } }
+name: {{SKILL_NAME}}
 description: Stress-test the active task's already-decided planning artifacts before building. Discovers whatever artifacts the task actually produced, then grills them relentlessly for missing boundaries, hidden assumptions, and contradictions.
 ---
 

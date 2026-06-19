@@ -1,5 +1,5 @@
 ---
-name: { { SKILL_NAME } }
+name: {{SKILL_NAME}}
 description: Required before any build work — a feature, component, behavior change, or refactor. Interviews the user one question at a time to turn a raw request into validated requirements, a technical design, and an implementation plan before any code is written.
 ---
 

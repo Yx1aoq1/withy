@@ -1,5 +1,5 @@
 ---
-name: { { SKILL_NAME } }
+name: {{SKILL_NAME}}
 description: Implement the active task's approved plan — consult the project and global knowledge bases first, reuse what they already settle, and verify each step.
 ---
 

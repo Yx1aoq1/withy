@@ -1,5 +1,5 @@
 ---
-name: { { SKILL_NAME } }
+name: {{SKILL_NAME}}
 description: Verify recently written code before it advances — review the diff, run the project's checks, fix every failure, and capture durable lessons. Runs on whatever is in the working tree; needs no planning artifact.
 ---
 
