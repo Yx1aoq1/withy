@@ -17,7 +17,7 @@ export const PHASE_PLANNING = 'planning';
 export const PHASE_EXECUTE = 'execute';
 export const PHASE_FINISH = 'finish';
 
-/** Default consecutive-failure threshold for the "stuck" alarm (overridable by config.json). */
+/** Default consecutive-failure threshold for the "stuck" alarm (overridable by config.yaml). */
 export const DEFAULT_STUCK_THRESHOLD = 3;
 
 /** Max length a stored event `reason` is truncated to (compact JSONL lines). */

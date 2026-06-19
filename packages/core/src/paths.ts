@@ -93,7 +93,7 @@ export function currentTaskPointerPath(scope: Scope): string {
 // ── Global root files (config + project registry — core.md §2.1) ─────────────
 
 export function globalConfigPath(scope: Scope): string {
-  return resolve(scope.withyDir, 'config.json');
+  return resolve(scope.withyDir, 'config.yaml');
 }
 
 export function projectsRegistryPath(scope: Scope): string {

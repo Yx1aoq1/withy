@@ -9,3 +9,7 @@ packages/app/next-env.d.ts
 
 # Machine-generated lockfile (not Prettier's to format)
 pnpm-lock.yaml
+
+# CLI scaffolding templates: contain {{TOKEN}} placeholders (not valid YAML/JSON
+# pre-render) and are written verbatim at init — Prettier must not touch them.
+packages/cli/src/templates/

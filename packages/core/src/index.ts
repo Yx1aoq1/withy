@@ -200,6 +200,7 @@ export {
   readGitStatus,
   writeJsonFile,
   readJsonFile,
+  readTextFile,
   isDirectory,
   dirExists,
   ensureDir,

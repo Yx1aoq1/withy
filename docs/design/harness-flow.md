@@ -28,7 +28,7 @@ web                  展示和编辑，不复制 core 的判定逻辑
 flowchart TD
   A[首次使用 Withy] --> B{全局环境已初始化?}
   B -- 否 --> B1[withy init --global]
-  B1 --> B2[产物: ~/.withy/config.json<br/>projects.json<br/>workflow 与 knowledge 模板]
+  B1 --> B2[产物: ~/.withy/config.yaml<br/>projects.json<br/>workflow 与 knowledge 模板]
   B -- 是 --> C
   B2 --> C{当前仓库已初始化?}
 
@@ -128,8 +128,8 @@ flowchart TD
 
 | 阶段       | 产物                                                                          | 性质                                 | 消费方                 |
 | ---------- | ----------------------------------------------------------------------------- | ------------------------------------ | ---------------------- |
-| 全局初始化 | `~/.withy/config.json`、`projects.json`、`workflows/`、`knowledge/`           | 本机个人配置与跨项目模板，不保存任务 | CLI、web、新项目初始化 |
-| 项目初始化 | `.withy/config.json`、`guide.md`、`context.json`、`workflows/*.workflow.json` | 项目共享 harness 配置                | core、hook、web        |
+| 全局初始化 | `~/.withy/config.yaml`、`projects.json`、`workflows/`、`knowledge/`           | 本机个人配置与跨项目模板，不保存任务 | CLI、web、新项目初始化 |
+| 项目初始化 | `.withy/config.yaml`、`guide.md`、`context.json`、`workflows/*.workflow.json` | 项目共享 harness 配置                | core、hook、web        |
 | 项目初始化 | `.withy/knowledge/{sources,wiki,index.md,log.md}`                             | 项目知识与产物模板库                 | hook、skill、web       |
 | 身份初始化 | `.withy/.developer`、`workspace/<slug>/index.md`                              | 本地身份 + 共享成员名册              | task create/list、web  |
 | agent 适配 | agent 原生 skill 目录、hook 声明、`template-hashes.json`                      | 平台接入与模板升级保护               | agent、`withy update`  |
@@ -154,7 +154,7 @@ flowchart TD
 | `grill-me`      | 三份规划产物、用户澄清、项目规范    | 审查并回写 `prd.md`、`design.md`、`implement.md` | 三份规划产物 + approval                 | `design-template`                      |
 | `dev`           | 规划产物、上下文清单、代码库        | 生产代码、测试代码、必要迁移/文档                | **当前无 artifact/check gate**          | 通常不需要文档模板                     |
 | `check`         | git diff、设计与实施计划、测试命令  | `check-result.json`                              | **当前仅 `npm test`**                   | `check-result-template` 或 JSON schema |
-| `wrapup/finish` | 全部产物、`git diff`、验证结果       | 无文件产物(口头 recap + 知识库沉淀)             | **当前无 artifact gate**                | 无                                     |
+| `wrapup/finish` | 全部产物、`git diff`、验证结果      | 无文件产物(口头 recap + 知识库沉淀)              | **当前无 artifact gate**                | 无                                     |
 
 上表的“目标产物”来自现有 skill 正文和设计文档；除明确标注的当前硬门禁外，其他产物还没有被 workflow 强制要求。
 

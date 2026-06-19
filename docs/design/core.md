@@ -32,7 +32,7 @@
 
 | 路径                        | 格式 | git        | 内容                                                                                                  | 谁用                               |
 | --------------------------- | ---- | ---------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `config.json`               | JSON | —(在 home) | 全局默认:默认 agent/workflow、dashboard 偏好、skills 默认落地方式                                     | web 全局设置页读写;CLI init 读默认 |
+| `config.yaml`               | YAML | —(在 home) | 全局默认:默认 agent/workflow、dashboard 偏好、skills 默认落地方式                                     | web 全局设置页读写;CLI init 读默认 |
 | `projects.json`             | JSON | —          | 已知项目注册表 `[{path,name,addedAt}]`                                                                | web 多项目看板的列表源             |
 | `workflows/*.workflow.json` | JSON | —          | **可选**:跨项目复用的 workflow 模板                                                                   | 新项目 init 时作为模板候选         |
 | `knowledge/`                | 目录 | —          | **可选**:跨项目复用的全局知识库(条目模型见 [knowledge.md](./knowledge.md));新项目 init 时作为模板候选 | 注入候选;web 知识库管理            |
@@ -40,22 +40,29 @@
 
 全局根**没有** tasks(已定,§10)、没有 workspace 名册、没有 `.developer`(全局即本人,无需过滤)。worktree 并行已移出 MVP(§9.1 方案存档)。
 
+```yaml
+# ~/.withy/config.yaml
+# YAML 是为了允许手编时写注释;web 写回须走 yaml 的 Document/CST 模式做保留式 round-trip,勿整体重写。
+version: 0.1.0
+defaults:
+  agent: codex
+  workflow: default
+  skills: link # link(软链)| copy(拷贝)
+dashboard:
+  host: 127.0.0.1
+  port: 47321
+```
+
 ```jsonc
-// ~/.withy/config.json
-{
-  "version": "0.1.0",
-  "defaults": { "agent": "codex", "workflow": "default", "skills": "link" },
-  "dashboard": { "host": "127.0.0.1", "port": 47321 }
-}
 // ~/.withy/projects.json
-{ "projects": [ { "path": "/Users/yan/work/app-a", "name": "app-a", "addedAt": "2026-06-12T..." } ] }
+{ "projects": [{ "path": "/Users/yan/work/app-a", "name": "app-a", "addedAt": "2026-06-12T..." }] }
 ```
 
 ### 2.2 项目根 `<repo>/.withy/`(协作,过滤用户)
 
 | 路径                            | 格式    | git                 | 内容                                                                                                                             | 谁用                                    |
 | ------------------------------- | ------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `config.json`                   | JSON    | 共享                | 项目配置:默认 workflow/agent、任务过滤、dashboard 端口                                                                           | web/CLI 读                              |
+| `config.yaml`                   | YAML    | 共享                | 项目配置:默认 workflow/agent、任务过滤、dashboard 端口                                                                           | web/CLI 读                              |
 | `guide.md`                      | MD      | 共享                | **会话开场说明**(项目须知/Withy 介绍);session-start 注全文,用户直接编辑(harness §6.4)                                            | hook 注入;web 编辑                      |
 | `context.json`                  | JSON    | 共享                | 默认注入上下文配置                                                                                                               | harness 注入;web context 页编辑         |
 | `workflows/*.workflow.json`     | JSON    | 共享                | workflow 定义(门禁依据)                                                                                                          | harness 门禁;web workflow 页            |

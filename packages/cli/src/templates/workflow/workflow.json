@@ -1,0 +1,39 @@
+{
+  "id": "default",
+  "name": "Default Coding Workflow",
+  "version": "0.4.0",
+  "entry": "brainstorm",
+  "phases": [
+    { "id": "planning", "entry": "brainstorm" },
+    { "id": "execute", "entry": "dev" },
+    { "id": "finish", "entry": "finish" }
+  ],
+  "nodes": [
+    {
+      "id": "brainstorm",
+      "type": "skill",
+      "skill": "brainstorm",
+      "phase": "planning",
+      "next": "grill-me",
+      "gate": { "artifacts": ["prd.md", "design.md", "implement.md"] }
+    },
+    {
+      "id": "grill-me",
+      "type": "skill",
+      "skill": "grill-me",
+      "phase": "planning",
+      "next": "dev",
+      "gate": { "artifacts": ["prd.md", "design.md", "implement.md"], "approval": true }
+    },
+    { "id": "dev", "type": "skill", "skill": "dev", "phase": "execute", "next": "check" },
+    {
+      "id": "check",
+      "type": "skill",
+      "skill": "check",
+      "phase": "execute",
+      "next": "finish",
+      "gate": { "checks": ["npm test"] }
+    },
+    { "id": "finish", "type": "skill", "skill": "finish", "phase": "finish", "next": null }
+  ]
+}

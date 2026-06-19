@@ -79,7 +79,7 @@ web 表单与 CLI 交互**同源**:都读 `INIT_QUESTIONS`、产出同一个 `In
 ```text
 全局
   /                顶层:项目列表(加项目/切换)+ 全局状态
-  /settings        全局配置(~/.withy/config.json:默认 agent/workflow/dashboard)
+  /settings        全局配置(~/.withy/config.yaml:默认 agent/workflow/dashboard)
 
 项目(?project=<path>)
   /p/tasks         任务看板(按 status 分组)+ 用户过滤(全部/各负责人,默认当前用户)+ 卡住告警(重试超阈值标黄)+ 活跃/已归档顶部切换(归档列表按 YYYY-MM 月份分组、只读详情)
@@ -196,7 +196,7 @@ web 表单与 CLI 交互**同源**:都读 `INIT_QUESTIONS`、产出同一个 `In
 | `GET /api/projects`                                       | 已知项目列表                                                                                       | 读 `~/.withy/projects.json`                                                                                  |
 | `POST /api/projects`                                      | 加项目(校验+注册)                                                                                  | body `{ path }`,detectWithy                                                                                  |
 | `POST /api/projects/init`                                 | 初始化未含 .withy 的项目                                                                           | body=`InitConfig{path,agents,skills,user}`,spawn withy init(§2.4)                                            |
-| `GET\|PUT /api/global/config`                             | 全局配置                                                                                           | `~/.withy/config.json`                                                                                       |
+| `GET\|PUT /api/global/config`                             | 全局配置                                                                                           | `~/.withy/config.yaml`                                                                                       |
 | `GET /api/tasks?project&filter`                           | 任务列表                                                                                           | 项目级过滤                                                                                                   |
 | `GET /api/tasks/:id?project`                              | 任务详情                                                                                           | `{ task,state,artifacts,events }`                                                                            |
 | `GET /api/tasks/:id/events?project`                       | 事件时间线(events.jsonl)                                                                           | 注入对比/重试/跳步/跳过                                                                                      |

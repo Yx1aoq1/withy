@@ -1,0 +1,17 @@
+# {{PRODUCT_NAME}} 项目配置(.withy/config.yaml)
+# 项目共享的 harness 配置,随仓库提交。可手动编辑,注释会被保留。
+version: 0.1.0
+
+defaultWorkflow: default # 默认 workflow id
+defaultAgent: {{DEFAULT_AGENT}} # 默认 agent;null = 未指定
+
+# 任务默认视图
+tasks:
+  defaultFilter: mine # 默认过滤
+  ownerFields: [creator, assignee] # 判定归属的字段
+
+# 本机看板服务
+dashboard:
+  host: 127.0.0.1
+  port: 47321
+  defaultTaskFilter: mine

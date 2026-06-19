@@ -161,7 +161,7 @@ switch 判定原因与看板同源(读 `state.decisions`)。**所有流程命令
 
 - 门禁失败**不改变 state**:停留原节点,修复后再次 `withy next` 即返工。workflow 图无环(validate 拒绝回边),state 无迭代轮次概念。
 - 每次 `next` 尝试(成败、缺 branch、非法 branch)都追加 `events.jsonl`(core §4.4)——重试是 workflow 执行质量统计的素材,不是要物理拦死 agent 行为。
-- 同节点失败超过 `config.json` 阈值 → 看板告警(标黄「卡住」),**门禁永不自动放行**。
+- 同节点失败超过 `config.yaml` 阈值 → 看板告警(标黄「卡住」),**门禁永不自动放行**。
 - 逃生通道:`withy next --skip --reason "..."`——人工显式跳过(门禁配错/检查 flaky 时用),事件留痕(type=skip)。`--skip` 应在 skill 正文中声明为用户授权后才可使用。
 
 ### 2.5 分支:switch 靠 agent 判断(替代原"三类信号源")

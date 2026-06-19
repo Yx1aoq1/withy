@@ -1,0 +1,14 @@
+# {{PRODUCT_NAME}} 全局配置(~/.withy/config.yaml)
+# 本机个人默认值与跨项目偏好。可手动编辑,注释会被保留。
+version: 0.1.0
+
+# 新项目 init 的默认选择
+defaults:
+  agent: null # 默认 agent;null = 每次询问
+  workflow: default # 默认 workflow id
+  skills: {{SKILLS}} # 技能落地方式:link(软链)| copy(拷贝)
+
+# 本机看板服务监听地址
+dashboard:
+  host: 127.0.0.1
+  port: 47321
