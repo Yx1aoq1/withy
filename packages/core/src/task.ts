@@ -43,6 +43,25 @@ export function archiveTask(scope: Scope, taskId: string, options: ArchiveOption
   const task = readTask(scope, taskId);
   if (task.archivedAt) throw new Error(`task "${taskId}" is already archived`);
 
+  // Archive validates terminal state + a fully-checked implementation plan; it never
+  // mutates progress. Completion is owned by `withy next` (advancing off the finish
+  // node → completed). `--cancelled` abandons a task without these checks.
+  if (!options.markCancelled) {
+    if (task.status !== 'completed') {
+      throw new Error(
+        `task "${taskId}" is ${task.status}, not completed — finish it with "withy next" past the finish step, ` +
+          `or abandon it with "withy task archive ${taskId} --cancelled"`,
+      );
+    }
+    const undone = readImplementation(scope, taskId).items.filter(item => !item.done).length;
+    if (undone > 0) {
+      throw new Error(
+        `task "${taskId}" has ${undone} unchecked implementation step(s) in implement.md — ` +
+          `check them all off before archiving, or abandon with "withy task archive ${taskId} --cancelled"`,
+      );
+    }
+  }
+
   const archivedAt = nowIso();
   const status = options.markCancelled ? 'cancelled' : task.status;
   writeTask(scope, { ...task, status, archivedAt });
