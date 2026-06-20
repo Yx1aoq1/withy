@@ -1,6 +1,6 @@
 import { resolvePlannedContext } from './context.js';
 import { resolveCurrentTask } from '../task/index.js';
-import { nodeById } from '../workflow/index.js';
+import { describeNext, nodeById } from '../workflow/index.js';
 import { readGuide, readDeveloper, readState, readTask, readWorkflow } from '../store/index.js';
 import { readGitStatus } from '../utils/index.js';
 import type { PlannedEntry } from './context.js';
@@ -60,7 +60,10 @@ export function renderSessionStart(scope: Scope): SessionStartResult {
       }
       out.push(`- Next-Action: \`withy next --branch <label> --reason "..." --json\``);
     } else {
-      out.push(`- Next-Action: \`withy next --json\``);
+      const skill = describeNext(wf, state).skill;
+      out.push(
+        `- Next-Action: run \`withy task status --json\` to see how far this node has gotten, then run the \`${skill}\` skill for this step — it calls \`withy next\` itself once the work is done.`,
+      );
     }
   }
 
@@ -68,6 +71,22 @@ export function renderSessionStart(scope: Scope): SessionStartResult {
   out.push(...contextLines(planned));
 
   return { text: out.join('\n') + '\n', injected: planned.map(entry => entry.id), taskId };
+}
+
+/**
+ * UserPromptSubmit injection (harness §6). When there is no active task at all,
+ * nudge the agent to propose `withy task start` for build work before it edits
+ * code. Returns '' (no injection) when a task is active, stale, or ambiguous —
+ * those are session-start's concern, and a per-prompt nudge there is just noise.
+ * Advisory only; like every hook it soft-fails and never blocks the turn.
+ */
+export function renderUserPromptSubmit(scope: Scope): string {
+  if (resolveCurrentTask(scope) !== null) return '';
+  return (
+    '[Withy] No active task. If this turn is build work — a feature, a behavior change, a refactor, or edits ' +
+    'beyond a trivial one-line fix — propose `withy task start "<title>"` and get the user\'s agreement before ' +
+    'writing or editing code.\n'
+  );
 }
 
 // 计划注入项渲染:full 注正文为独立小节,index 汇成「按需阅读」清单

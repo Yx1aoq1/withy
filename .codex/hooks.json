@@ -5,6 +5,12 @@
         "matcher": "startup|resume",
         "hooks": [{ "type": "command", "command": "withy hook session-start" }]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "withy hook user-prompt-submit" }]
+      }
     ]
   }
 }

@@ -2,7 +2,7 @@
 // context) into host-facing capabilities (session-start injection). Pure
 // orchestration; touches no fs. Explicit named re-exports only (CLAUDE.md).
 
-export { renderSessionStart } from './hook.js';
+export { renderUserPromptSubmit, renderSessionStart } from './hook.js';
 export type { SessionStartResult } from './hook.js';
 
 export { resolvePlannedContext } from './context.js';

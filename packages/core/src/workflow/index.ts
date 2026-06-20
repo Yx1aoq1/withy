@@ -8,7 +8,7 @@
 export { approveCurrentNode, nextNode, rewindTo, skipNode } from './runtime.js';
 export type { NextOptions, NextResult } from './runtime.js';
 
-export { deriveStatus, initialState, nodeById, phaseOf } from './interpret.js';
+export { describeNext, deriveStatus, initialState, nodeById, phaseOf } from './interpret.js';
 export type { NextStep, BranchView } from './interpret.js';
 
 export { validateWorkflow } from './validate.js';

@@ -36,6 +36,7 @@ When project and global define the same `id`, the project page wins — prefer t
 
 ## Implement
 
+- A previous session may have already implemented part of this. First run `git status` / `git diff` and reconcile the working tree against `implement.md` — the code is the source of truth for progress, not memory. Continue from the first step not yet reflected in the code; do not redo work that is already there.
 - Work through `implement.md` in order. Each step carries its own verification — run that check before starting the next dependent step.
 - Match the surrounding code's existing style, naming, and structure, and touch only what the plan requires.
 - If you discover durable, reusable knowledge while implementing, hand it to the knowledge skill instead of burying it in the conversation. Keep this step focused on shipping the approved plan.

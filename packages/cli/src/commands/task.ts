@@ -1,9 +1,11 @@
 import {
   archiveTask,
+  describeNext,
   deriveStatus,
   initialState,
   listTasks,
   readDeveloper,
+  readGitStatus,
   listTaskArtifacts,
   readKnowledgeEntry,
   readState,
@@ -15,6 +17,7 @@ import {
   writeCurrentTaskPointer,
   writeState,
   writeTask,
+  type NextStep,
   type Task,
 } from '@withy/core';
 import type { Command } from 'commander';
@@ -141,16 +144,34 @@ function runStatus(taskArg: string | undefined): void {
   const id = resolveTaskId(scope, taskArg);
   const task = readTask(scope, id);
   const state = readState(scope, id);
+  const next = describeNext(readWorkflow(scope, task.workflow), state);
+  const git = readGitStatus(scope.root);
   emit({
     ok: true,
     task: task.id,
     title: task.title,
     status: task.status,
     node: state.currentNode,
+    phase: next.phase ?? null,
+    skill: next.skill,
     completed: state.completedNodes,
     decisions: state.decisions,
     artifacts: listTaskArtifacts(scope, id),
+    git: git.isRepo ? { dirty: git.dirtyCount > 0, changedFiles: git.changedFiles } : null,
+    nextAction: statusGuidance(next),
   });
+}
+
+// Soft Next-Action for `task status`: a skill node nudges the agent to reconcile
+// the working tree against the plan before advancing (progress lives in the code,
+// not in memory); switch/done relay their own move. Advisory only — never a gate.
+function statusGuidance(next: NextStep): string {
+  if (next.node === null) return next.message ?? 'workflow complete — run `withy task archive <id>`';
+  if (next.type === 'switch') return 'decide a branch, then `withy next --branch <label> --reason "..."`';
+  return (
+    `read the \`${next.skill}\` skill, then reconcile your working-tree changes against the plan to see what is ` +
+    'left for this step; run `withy next` only once it is genuinely done'
+  );
 }
 
 interface ArchiveOptions {

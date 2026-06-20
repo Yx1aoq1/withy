@@ -133,6 +133,7 @@ export type { ArchiveOptions, CurrentTask } from './task/index.js';
 export {
   approveCurrentNode,
   validateWorkflow,
+  describeNext,
   deriveStatus,
   initialState,
   nodeById,
@@ -184,7 +185,7 @@ export type {
 export { logicalSkillName, resolveSkillRef, discoverSkills, skillExists } from './agents/index.js';
 export type { DiscoveredSkill, ResolvedSkill } from './agents/index.js';
 
-export { renderSessionStart } from './session/index.js';
+export { renderUserPromptSubmit, renderSessionStart } from './session/index.js';
 export type { SessionStartResult } from './session/index.js';
 
 export { serializeToCommand, toSkillAdapterMode, INIT_QUESTIONS } from './agents/index.js';

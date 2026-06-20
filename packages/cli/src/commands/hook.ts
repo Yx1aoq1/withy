@@ -1,10 +1,10 @@
-import { appendEvent, renderSessionStart, resolveProjectScope } from '@withy/core';
+import { appendEvent, renderSessionStart, renderUserPromptSubmit, resolveProjectScope } from '@withy/core';
 import type { Command } from 'commander';
 
 export default function registerHookCommand(program: Command): void {
   program
     .command('hook <event>')
-    .description('Platform hook entry (session-start). Outputs injection text for the agent.')
+    .description('Platform hook entry (session-start | user-prompt-submit). Outputs injection text for the agent.')
     .action(runHook);
 }
 
@@ -26,6 +26,12 @@ function runHook(event: string): void {
           injected: result.injected,
         });
       }
+      process.exit(0);
+    }
+
+    if (event === 'user-prompt-submit') {
+      const text = renderUserPromptSubmit(scope);
+      if (text) process.stdout.write(text);
       process.exit(0);
     }
 

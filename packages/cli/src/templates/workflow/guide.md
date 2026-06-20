@@ -1,16 +1,18 @@
 # {{PRODUCT_NAME}} workflow guide
 
-{{PRODUCT_NAME}} is available as a task workflow tool. When the user brings you a task and no active {{PRODUCT_NAME}}
-task covers it, proactively ask whether they want to create one before starting the work.
+{{PRODUCT_NAME}} is available as a task workflow tool. Before you write or edit any code for build work — a feature, a
+behavior change, a refactor, or anything beyond a trivial one-line fix — stop and propose creating a task first; do not
+start the work until the user agrees or declines. Pure questions, explanations, and read-only investigation need no
+task. When unsure, ask rather than assume it is too small.
 
-If the user agrees, run `withy task start "<concise title>" --json`, then follow the injected workflow state and
-Next-Action. Do not decide whether the task is too small or otherwise bypass the workflow; the workflow chooses the
-appropriate path. If the user declines, continue without creating a task.
+If the user agrees, follow the Next-Action injected below to start the task, then follow the injected workflow state.
+The workflow — not you — decides whether the task is light or full; do not bypass it. If the user declines, continue
+without one.
 
 ## Rules
 
 - When an active task already covers the user's request, continue that task instead of asking to create another one.
-- The flow advances only via `withy next`. An agent claiming "done" does not advance a step.
+- The flow advances only via `withy next`; on a skill node, run the node's skill first and let it advance once the step is genuinely done. An agent claiming "done" does not advance a step.
 - Steps that declare artifacts / checks / approvals must pass their gate before moving on.
 - When the next move is unclear, follow the injected Next-Action.
 
