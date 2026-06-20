@@ -3,7 +3,7 @@ id: testing-build-conventions
 title: 测试组织与构建配置约定
 kind: spec
 tags: [tooling, testing, build, monorepo, vitest, tsconfig]
-summary: 三包统一 vitest;测试放 tests/ 镜像 src/;vitest include 锁 tests/;tsconfig 不在 typecheck 配置设 rootDir(避 TS6059),rootDir 只留 build 配置以保 dist 无测试。
+summary: 三包统一 vitest;测试放 tests/ 镜像 src/;vitest include 锁 tests/;tsconfig 不在 typecheck 配置设 rootDir(避 TS6059),rootDir 只留 build 配置以保 dist 无测试;Prettier 忽略 .withy/ 与 *.md(数据/文稿非源码,且会重排 CJK 表格)。
 inject: index
 injectByDefault: false
 sources: []
@@ -44,6 +44,12 @@ export default defineConfig({ test: { include: ['tests/**/*.test.ts'] } });
 - `tsconfig.build.json` 才设 `rootDir: 'src'`,且 `include` 只含 `src/**/*.ts`,从而 `dist/` 不含测试、目录结构干净。
 
 **坑**:即便 `noEmit: true`,只要 typecheck 的 tsconfig 设了 `rootDir: 'src'`,把 `tests/**`(在 `src/` 之外)纳入 `include` 就会触发 `TS6059: File '…/tests/x.test.ts' is not under rootDir '…/src'`。把 `rootDir` 从 typecheck 配置移除、仅保留在 `tsconfig.build.json`,两边各取所需:typecheck 覆盖 tests、build 产物无 tests。
+
+## 5. Prettier 校验范围:忽略 `.withy/` 与 `*.md`
+
+`.prettierignore` 排除 **`.withy/`**(运行时/任务/知识数据,由程序或 agent 写,非手写源码)与 **所有 `*.md`**(作者文稿;且 Prettier 按字符宽度重排中文表格的列对齐——无意义,在不同编辑器下还不稳定)。
+
+**坑**:`.husky/pre-commit` 跑全仓 `pnpm format:check`,所以这两类内容此前会把**与本次改动无关的提交**也卡住(报一堆 `.withy/**` 与中文 md 的格式 warning)。忽略后 format:check 只校验真正的源码(`.ts`/`.json` 等);源码侧的 md(如 packages 下 README)若需校验,再在 `.prettierignore` 收窄规则即可。唯一该管的源码格式债(如超 `printWidth` 的一行 export)仍照修,不靠忽略源码糊弄。
 
 ## 验收(重构后长期成立)
 

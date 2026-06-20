@@ -2,7 +2,7 @@
 
 # guides/
 
-- [测试组织与构建配置约定](testing-build-conventions.md) — 三包统一 vitest;测试放 tests/ 镜像 src/;vitest include 锁 tests/;tsconfig 不在 typecheck 配置设 rootDir(避 TS6059),rootDir 只留 build 配置以保 dist 无测试。
+- [测试组织与构建配置约定](testing-build-conventions.md) — 三包统一 vitest;测试放 tests/ 镜像 src/;vitest include 锁 tests/;tsconfig 不在 typecheck 配置设 rootDir(避 TS6059),rootDir 只留 build 配置以保 dist 无测试;Prettier 忽略 .withy/ 与 *.md(数据/文稿非源码,且会重排 CJK 表格)。
 
 ## Subdirectories
 

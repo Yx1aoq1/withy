@@ -7,7 +7,7 @@ tags: [withy, decisions, status, roadmap, review]
 summary: '评审决策史、实现状态矩阵、针对历轮不满的解法、落地优先级、待产品确认与维护约定(自旧 INDEX 提炼,去掉导航地图与概念速查)。'
 inject: index
 injectByDefault: false
-updated: 2026-06-19
+updated: 2026-06-20
 ---
 
 # 评审决策与实现状态
@@ -23,6 +23,7 @@ updated: 2026-06-19
 > **2026-06-17 评审(推进命令收敛轮)**:确认 Withy 是**协作式 harness / 轻量状态机**,不是 agent 执行沙箱;继续排除 run 模式、命令代理、shell allowlist。agent 面向命令从 `withy complete <node>` 收敛为 **`withy next`**:默认读取 `state.currentNode` 校验当前节点门禁并推进,不再让 agent 传 node;停在 switch 时 `withy next` 只输出合法分支与提示,真正判定用 `withy next --branch <label> --reason "..."`。**删除 CLI `complete` 命令**,不保留兼容入口;`approve` 默认批准当前节点;`rewind` 使用 `--to <node>` 显式选择回退目标。
 > **2026-06-17 评审(画布编排轮)**:workflow 画布从「固定容器 Sub Flow」改为**自由画布 + 软泳道**(n8n 式自由摆放 + 端口连线)。确立**位置与阶段解耦**:节点新增 `pos:{x,y}`(纯展示、不参与校验),`phase` 是驱动 task.status 的字段;**泳道不入库**,从 `workflow.phases` 顺序渲染(横带,上→下=规划→执行→收尾;flow 左→右),**无独立分诊列**——`phase` 缺省/`null` 节点归入第一条泳道(规划)显示。**拖进哪条泳道即写回 `node.phase`**(drop 时按节点中心命中、命中带否则取最近带,`pos.y` 存为带内相对偏移、钳到带顶之下故节点恒在带内、不出带不夹缝),每次 drop 强制改写故位置与 phase 不漂移;**不为 placement 新增任何校验——用户怎么摆就怎么存**(入口落在哪阶段、空阶段、跳过整段都接受)。连线由端口拖拽写回 `next`/`branches`、贝塞尔**统一实线**(分支靠 label 区分);泳道按内容自动长高、**虚线包围 + 带间间隔 + 暖色半透明底**(规划金/执行陶土/收尾橄榄);入口/终点用「入口」「终点」徽标。既有图校验(无环/阶段单调/switch default)仅保存时生效、`pos` 不参与。详见 web §3.3、core §4.3。
 > **2026-06-18 评审(命令收敛轮)**:CLI 输出从「全命令默认 JSON」改为**每命令两态**——缺省人读、全局 `--json` 转结构化(无 per-command flag;hook 例外)。**`task create` 并入 `task start`**(实参命中已存在 id→聚焦,否则当 title 新建;`-w/-a` 仅新建路径)。**删除三个命令**:`task assign`(改派改手动编辑 task.json,保留 `assignee` 字段与 `start --assignee`)、`withy check` 命令族、`withy workflow validate`(`validateWorkflow` 仍作 core 函数,在 `task start` 新建与 web 保存时跑)。**实施计划统一为 `implement.md`(markdown 复选框)**:agent 直写、web 只读展示、`implementationProgress` best-effort 解析复选框行并报未识别行数;文件存在性可进规划门禁,勾选状态不参与放行。详见 cli.md、core §3.1/§4.7。
+> **2026-06-20 评审(推进引导与进度可见性轮)**:修新会话误推进(events 实证:`session_start` 后 20s 即 `complete_attempt dev ok`,被迫 rewind)。**session-start 对 skill 节点的 Next-Action 不再字面让 agent 直接 `withy next`**,改为「先看 `withy task status`、再跑该节点 skill(由 skill 自调 `withy next`)」;新会话无本会话工作记忆,故引导先核对再推进。`withy task status` 增出**当前节点 skill + git 工作区进度 + 软 nextAction**;确立 **dev 执行进度的真相源 = git 工作树**(withy-dev 进入时先 `git status/diff` 对照工作区续做),**刻意不给 dev 阶段加产物/勾选门禁**——dev 节点保持无 gate,implement 勾选只在 finish 归档前校验(harness §1、core §9),不在 dev 阶段越权校验。落地 `inject-workflow-state`(UserPromptSubmit)的**无活跃任务→提醒 build work 先 `withy task start`** 子集(H12 由 P2 部分落地);guide 的建 task 触发改写为**「动手写代码前的可操作前置门」**(build work 才提议、纯问答/只读不需)。仓库约定:`.prettierignore` 忽略 `.withy/`(运行时/任务/知识数据)与 `*.md`(Prettier 无意义重排 CJK 表格),见 [[testing-build-conventions]]。
 
 ---
 
@@ -78,7 +79,7 @@ updated: 2026-06-19
 | 知识库 `knowledge/`(目录+条目 schema+ingest/query/lint)+ `withy-knowledge` skill                                             | ✅ 目录布局 + 条目 schema + 维护命令(graph/index/lint)+ `withy-knowledge` skill 正文(ingest/query/lint 协议)均已落地 | knowledge-base.md                |
 | 知识库 web 管理页(全局+项目两区,md 渲染)+ `withy knowledge graph/index/lint`(分 scope)+ 图谱视图                             | 🟡 `withy knowledge graph/index/lint`(分 scope,graph 含 `--merged`)已实现;web 管理页 + 图谱视图未实现                | knowledge-base.md §9/§10、web §3 |
 | context.json 分两层(default/node,项目共享不分用户)+ resolvePlannedContext 合并                                               | 🟡 default/node 合并已实现;全局/知识层待补                                                                           | knowledge-base.md §7、core §4    |
-| hook 薄转发 + `withy hook session-start` 注入(多态 + 软失败 + kill-switch)                                                   | ✅ 已实现(后续 per-turn/子 agent hook 待补)                                                                          | harness §6                       |
+| hook 薄转发 + `withy hook session-start` 注入(多态 + 软失败 + kill-switch)                                                   | ✅ 已实现;per-turn `inject-workflow-state`(UserPromptSubmit)落地「无活跃任务→提醒建 task」子集,子 agent hook 待补          | harness §6                       |
 | session-start `<guide>`(读 `.withy/guide.md` 工具文件)+ `<current-state>` git 块                                             | ✅ 已实现(严格 section 分块为后续细化)                                                                               | harness §6.4、H13                |
 | 注入形态 `inject:full\|index` + resolvePlannedContext 返回 PlannedEntry[]                                                    | ✅ 已实现(知识库读取层 readKnowledgeEntry)                                                                           | knowledge §4/§7、H14             |
 | 产物模板(`kind:template` + `gate.artifacts` 升级 ArtifactSpec)                                                               | 🟡 `gate.artifacts` 升级 `ArtifactSpec`(门禁只核 path)已实现;`kind:template` 注入待补                                | core §4.3.1、knowledge §4.1、K13 |
