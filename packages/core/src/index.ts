@@ -99,6 +99,7 @@ export {
   readContextConfig,
   listTaskArtifacts,
   readImplementation,
+  listWikiEntries,
   readDeveloper,
   findProjectByName,
   removeProject,
@@ -118,7 +119,7 @@ export {
   readTask,
   readGuide,
 } from './store.js';
-export type { ListTasksOptions, KnowledgeFile } from './store.js';
+export type { ListTasksOptions, KnowledgeFile, WikiEntry } from './store.js';
 
 export { countConsecutiveFailures, resolveCurrentTask, implementationProgress, archiveTask, isStuck } from './task.js';
 export type { ArchiveOptions, CurrentTask } from './task.js';
@@ -147,15 +148,23 @@ export { resolvePlannedContext } from './context.js';
 export type { PlannedEntry } from './context.js';
 
 export {
+  readKnowledgePageContent,
   rebuildKnowledgeIndexes,
   buildKnowledgeIndexes,
+  createKnowledgeFolder,
+  saveKnowledgePageBody,
+  deleteKnowledgeEntry,
   deriveKnowledgeGraph,
+  renameKnowledgeEntry,
+  createKnowledgePage,
   listKnowledgePages,
-  readKnowledgeEntry,
   deriveMergedGraph,
+  readKnowledgeEntry,
+  KnowledgeError,
   lintKnowledge,
 } from './knowledge.js';
 export type {
+  KnowledgePageContent,
   KnowledgeGraphEdge,
   KnowledgeGraphNode,
   KnowledgeIndexFile,

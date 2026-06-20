@@ -40,6 +40,9 @@ import {
   writeTextFile,
   readJsonFile,
   readTextFile,
+  isDirectory,
+  ensureDir,
+  moveDir,
   nowIso,
 } from './utils/index.js';
 
@@ -302,6 +305,88 @@ export function listKnowledgeFiles(scope: Scope): KnowledgeFile[] {
 /** Write text to a path relative to `knowledge/` (creates parents). Backs `withy knowledge index`. */
 export function writeKnowledgeFile(scope: Scope, relPath: string, content: string): void {
   writeTextFile(resolve(knowledgeDir(scope), relPath), content);
+}
+
+// ── Wiki entries by path (relative to knowledge/wiki/; callers guard with assertInsideWiki) ──
+// These are the by-path carry-disk primitives backing knowledge.ts CRUD. Unlike the by-id
+// readers above, they address files/dirs directly under wiki/ and never interpret frontmatter.
+
+// One node in the wiki/ directory tree (file or empty/non-empty dir).
+export interface WikiEntry {
+  // Path relative to knowledge/wiki/, posix separators (e.g. "api.md", "backend", "backend/api.md").
+  relPath: string;
+
+  // Whether the entry is a directory or a markdown file.
+  type: 'file' | 'dir';
+}
+
+function wikiEntryPath(scope: Scope, relPath: string): string {
+  return resolve(knowledgeDir(scope), 'wiki', relPath);
+}
+
+/** Read a wiki file by its wiki-relative path, or null when absent. */
+export function readWikiFile(scope: Scope, relPath: string): string | null {
+  return readTextFileIfExists(wikiEntryPath(scope, relPath));
+}
+
+/** Write a wiki file by its wiki-relative path (creates parent dirs). */
+export function writeWikiFile(scope: Scope, relPath: string, content: string): void {
+  const full = wikiEntryPath(scope, relPath);
+  ensureDir(dirname(full), []);
+  writeTextFile(full, content);
+}
+
+/** Classify a wiki-relative path as a dir, a file, or absent. */
+export function wikiEntryType(scope: Scope, relPath: string): 'file' | 'dir' | null {
+  const full = wikiEntryPath(scope, relPath);
+  if (!existsSync(full)) return null;
+  return isDirectory(full) ? 'dir' : 'file';
+}
+
+/** Create an (empty) wiki directory by its wiki-relative path. */
+export function makeWikiDir(scope: Scope, relPath: string): void {
+  ensureDir(wikiEntryPath(scope, relPath), []);
+}
+
+/** Move/rename a wiki entry (file or dir) within wiki/; creates the target's parent. */
+export function moveWikiEntry(scope: Scope, fromRelPath: string, toRelPath: string): void {
+  moveDir(wikiEntryPath(scope, fromRelPath), wikiEntryPath(scope, toRelPath));
+}
+
+/** Remove a wiki entry (file, or directory recursively). No-op when already absent. */
+export function removeWikiEntry(scope: Scope, relPath: string): void {
+  rmSync(wikiEntryPath(scope, relPath), { recursive: true, force: true });
+}
+
+/**
+ * Walk `knowledge/wiki/` and list every directory (including empty ones) and `.md`
+ * file as wiki-relative entries. Unlike {@link listKnowledgeFiles} this keeps empty
+ * dirs and the generated `index.md` files so the tree view and orphan-index cleanup
+ * can see the real on-disk shape.
+ *
+ * @param scope target scope
+ * @return flat entry list (dirs + md files); empty when there is no wiki dir
+ */
+export function listWikiEntries(scope: Scope): WikiEntry[] {
+  const wikiRoot = resolve(knowledgeDir(scope), 'wiki');
+  if (!existsSync(wikiRoot)) return [];
+
+  const entries: WikiEntry[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = resolve(dir, entry.name);
+      const rel = relative(wikiRoot, full).split(/[\\/]/).join('/');
+      if (entry.isDirectory()) {
+        entries.push({ relPath: rel, type: 'dir' });
+        walk(full);
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        entries.push({ relPath: rel, type: 'file' });
+      }
+    }
+  };
+
+  walk(wikiRoot);
+  return entries;
 }
 
 // ── Developer identity ───────────────────────────────────────────────────────
