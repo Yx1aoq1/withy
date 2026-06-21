@@ -59,10 +59,10 @@ updated: 2026-06-20
 - **TOC 锚点**:不要给 heading 自注入 `data-*` 属性——ProseMirror 重渲染会擦除。改用 Milkdown
   **自带的 heading `id`**(稳定、随重渲染保留)作锚点与 IntersectionObserver 目标。
 - **动态挂载时序**:编辑器是 `next/dynamic` + `ssr:false`,异步挂载可能晚于消费它 DOM 的组件
-  (如 TOC),需轮询等待 `[data-knowledge-scroll]` 出现再挂 MutationObserver。
+  (如 TOC),需轮询等待 `[data-doc-scroll]` 出现再挂 MutationObserver。
 - **app vitest**:`next build` 的 standalone 产物会复制 `src`(含 `*.test.ts`),需在
   `vitest.config.ts` 的 `exclude` 加 `**/.next/**`,否则跑到产物副本报 tsconfig 缺失。
 
 ## 关联页
 
-- [[knowledge-base]] · [[web]] · [[nextjs-architecture]] · [[react-patterns]] · [[core]]
+- [[knowledge-base]] · [[web]] · [[nextjs-architecture]] · [[react-patterns]] · [[core]] · [[scroll-readonly-markdown]]

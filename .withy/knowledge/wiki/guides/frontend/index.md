@@ -5,3 +5,4 @@
 - [Milkdown/Crepe 双链序列化陷阱与自研插件](milkdown-wikilink.md) — 裸 Crepe 序列化会把双链转义破坏关系图;自研 remark+$node+$inputRule 三件套插件让双链往返逐字保真。
 - [Next.js 核心架构规范](nextjs-architecture.md) — 前端规范指南:Next.js App Router 项目分层目录、appTemplates 页面模块结构、命名约定、文件路由、next-intl 国际化、错误边界。
 - [React 开发模式与逻辑规范](react-patterns.md) — 前端规范指南:React 组件设计与组合、状态管理选型、自定义 Hooks 与 useEffect 陷阱、常见反例。
+- [滚动条策略与只读 Markdown 展示组件](scroll-readonly-markdown.md) — OverlayScrollbars Scroller 悬浮滚动消重排;markdown 正文区刻意保留原生 .doc-scroll(否则破坏 TOC 的 IntersectionObserver root/scrollIntoView);只读渲染面 MarkdownView + 章节目录 DocOutline + milkdown-tokens.css 为共享展示三件套。
