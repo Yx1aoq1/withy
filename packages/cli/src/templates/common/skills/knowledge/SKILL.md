@@ -48,11 +48,14 @@ summary: REST naming, error codes, pagination rules.   # one line; what the inde
 inject: index                # index (default) injects title + summary + path; full injects the whole body
 injectByDefault: false       # whether it joins the default injection set
 sources: [sources/rest-rfc.md]   # which raw sources this page synthesizes (traceable)
+covers: [packages/api/src/**]    # optional: repo-relative globs of the code this page documents (powers `coverage`)
 updated: 2026-06-19
 ---
 ```
 
 Use `inject: full` only for short, must-read content — a terse convention, or a `kind: template` page whose body is an artifact skeleton other skills fill in. Long references stay `inject: index` so a session gets the pointer and drills in on demand.
+
+Add `covers` to a page that documents specific code: list the repo-relative globs (e.g. `packages/core/src/**`) it describes. This is what links a doc to its implementation — the `coverage` query resolves it in both directions, and `lint` flags a glob that matches nothing.
 
 ## Ingest
 
@@ -73,19 +76,28 @@ When asked something the base should know:
 3. Answer with citations to the page ids you used.
 4. When the answer is itself durable — a comparison, an analysis, a relationship you discovered — file it as a new page so the work compounds instead of dissolving into the conversation.
 
+## Relate Documents and Code
+
+Beyond reading pages, two relation queries answer "what connects to what" — machine-derived from `[[links]]` and `covers`, distinct from full-text reading:
+
+- `withy knowledge related <id>` — documents directly linked (in or out) to `<id>` via `[[links]]` (one hop, deduped). Use it to find a page's neighbours without opening it.
+- `withy knowledge coverage --doc <id>` — the `covers` globs a page declares (verbatim); `withy knowledge coverage --path <repo/relative/path>` — the doc ids whose `covers` glob matches that path. Use the latter when touching code, to find the page that documents it.
+
+Both take `--global` and `--json`. They read a derived `graph.json` cache that rebuilds itself whenever a page changes, so results always reflect the current wiki.
+
 ## Lint and Keep It Consistent
 
-Run `withy knowledge lint` (add `--global` for the global base) for a mechanical health check: orphan pages with no inbound link, links pointing at a page that does not exist, and dangling injection references. Resolve what it surfaces — add the missing cross-link, fix or remove the broken link, create the absent page.
+Run `withy knowledge lint` (add `--global` for the global base) for a mechanical health check: orphan pages with no inbound link, links pointing at a page that does not exist, dangling injection references, and dangling `covers` (a glob that matches no file in the repo). Resolve what it surfaces — add the missing cross-link, fix or remove the broken link, create the absent page, correct the stale glob.
 
 Beyond the mechanical check, watch for what the linter cannot see: a claim a newer source has overturned, two pages that now contradict each other, a concept mentioned everywhere but lacking its own page. Reconcile contradictions into one authoritative statement rather than leaving both standing.
 
-To see how pages connect, run `withy knowledge graph` (`--global` for global, `--merged` for a combined global + project view) — useful for spotting hubs and isolated pages.
+To see how pages connect, run `withy knowledge graph` (`--global` for global, `--merged` for a combined global + project view) — useful for spotting hubs and isolated pages. It reads the self-rebuilding `graph.json` cache (gitignored); `cover` edges to code live in this data but not in the web force-directed view, which stays document-only.
 
 ## After You Change the Base
 
 Two deterministic chores close out any ingest or edit. Let the commands do them rather than editing by hand:
 
-1. Run `withy knowledge index` (add `--global` to match the base you changed) to recompute every level's `index.md` from page frontmatter. Hand-maintaining multi-level indexes drops pages; the command does not.
+1. Run `withy knowledge index` (add `--global` to match the base you changed) to recompute every level's `index.md` from page frontmatter, and rewrite the `graph.json` relation cache in the same pass. Hand-maintaining multi-level indexes drops pages; the command does not.
 2. Append one line to `log.md` recording what you did:
 
 ```text
