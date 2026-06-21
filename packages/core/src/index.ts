@@ -99,6 +99,7 @@ export {
   readContextConfig,
   listTaskArtifacts,
   readImplementation,
+  readTaskArtifact,
   listWikiEntries,
   readDeveloper,
   findProjectByName,

@@ -24,7 +24,14 @@ export {
   readProjects,
 } from './projects.js';
 
-export { listTaskArtifacts, readImplementation, readContextConfig, readDeveloper, readGuide } from './meta.js';
+export {
+  listTaskArtifacts,
+  readContextConfig,
+  readImplementation,
+  readTaskArtifact,
+  readDeveloper,
+  readGuide,
+} from './meta.js';
 
 export {
   listKnowledgeFiles,

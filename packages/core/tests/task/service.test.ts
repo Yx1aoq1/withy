@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { taskPath, type Scope } from '../../src/paths.js';
-import { listTaskArtifacts, readImplementation, writeTask, readTask } from '../../src/store/index.js';
+import { listTaskArtifacts, readImplementation, readTaskArtifact, writeTask, readTask } from '../../src/store/index.js';
 import { implementationProgress, archiveTask } from '../../src/task/index.js';
 import { writeTextFile, writeJsonFile, nowIso } from '../../src/utils/index.js';
 import type { Task } from '../../src/types.js';
@@ -89,6 +89,25 @@ describe('listTaskArtifacts', () => {
     writeTextFile(taskPath(scope, 'task-1', 'events.jsonl'), '{}\n');
 
     expect(listTaskArtifacts(scope, 'task-1')).toEqual(['design.md', 'prd.md']);
+  });
+});
+
+describe('readTaskArtifact', () => {
+  it('returns the body of an existing artifact', () => {
+    const scope = createScope();
+    writeTextFile(taskPath(scope, 'task-1', 'prd.md'), '# PRD\nbody\n');
+    expect(readTaskArtifact(scope, 'task-1', 'prd.md')).toBe('# PRD\nbody\n');
+  });
+
+  it('returns null when the artifact does not exist', () => {
+    expect(readTaskArtifact(createScope(), 'task-1', 'missing.md')).toBeNull();
+  });
+
+  it('rejects unsafe names (traversal, separators, non-md)', () => {
+    const scope = createScope();
+    for (const name of ['../secret.md', 'a/b.md', 'a\\b.md', '..', '.', 'task.json', 'prd']) {
+      expect(() => readTaskArtifact(scope, 'task-1', name)).toThrow();
+    }
   });
 });
 
