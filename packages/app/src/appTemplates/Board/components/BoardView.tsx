@@ -6,6 +6,7 @@ import { TaskCard } from './TaskCard';
 import { ViewDetail } from './ViewDetail';
 import { ArchivedList } from './ArchivedList';
 import { ArchivedDetail } from './ArchivedDetail';
+import { Scroller } from '@/components/Scroller';
 import type { BoardCard, BoardColumn, BoardData, ArchivedData } from '@/types/dashboard';
 
 interface BoardViewProps {
@@ -107,28 +108,30 @@ export function BoardView({ board, archived, identityName, project }: BoardViewP
               ))}
             </div>
 
-            <div className="grid min-h-0 flex-1 grid-cols-3 overflow-y-auto px-[18px] pb-[18px]">
-              {COLUMNS.map((col, i) => (
-                <div
-                  key={col}
-                  className={`flex flex-col gap-3 py-1.5 pr-3.5 pl-1 ${
-                    i > 0 ? 'border-l border-dashed border-line-strong pl-4' : ''
-                  }`}
-                >
-                  {filtered.columns[col].map(card => (
-                    <TaskCard
-                      key={card.id}
-                      card={card}
-                      selected={card.id === selected?.id}
-                      onSelect={() => setSelectedId(card.id)}
-                    />
-                  ))}
-                  {filtered.columns[col].length === 0 && (
-                    <p className="px-1 py-3 text-[12px] text-ink-faint">{t('empty')}</p>
-                  )}
-                </div>
-              ))}
-            </div>
+            <Scroller className="min-h-0 flex-1">
+              <div className="grid grid-cols-3 px-[18px] pb-[18px]">
+                {COLUMNS.map((col, i) => (
+                  <div
+                    key={col}
+                    className={`flex flex-col gap-3 py-1.5 pr-3.5 pl-1 ${
+                      i > 0 ? 'border-l border-dashed border-line-strong pl-4' : ''
+                    }`}
+                  >
+                    {filtered.columns[col].map(card => (
+                      <TaskCard
+                        key={card.id}
+                        card={card}
+                        selected={card.id === selected?.id}
+                        onSelect={() => setSelectedId(card.id)}
+                      />
+                    ))}
+                    {filtered.columns[col].length === 0 && (
+                      <p className="px-1 py-3 text-[12px] text-ink-faint">{t('empty')}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Scroller>
           </>
         ) : (
           <ArchivedList

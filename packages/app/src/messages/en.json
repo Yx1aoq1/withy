@@ -51,14 +51,16 @@
     "save_saving": "Saving…",
     "save_saved": "Saved",
     "save_error": "Save failed",
-    "toc": "Outline",
-    "untitledHeading": "(untitled)",
     "selectHint": "Select a page on the left to view and edit",
     "loadFailed": "Failed to load this page",
     "modeDoc": "Document",
     "modeGraph": "Graph",
     "graphEmpty": "No links yet",
     "graphHint": "Click a node to open the page"
+  },
+  "doc": {
+    "outline": "Outline",
+    "untitledHeading": "(untitled)"
   },
   "board": {
     "all": "All",
@@ -87,10 +89,34 @@
     "implementationEmpty": "No implementation steps",
     "implementationSteps": "Implementation steps ({count})",
     "implementationUnparsed": "{count} list items in implement.md were not recognized as checkboxes",
-    "ownerLine": "Owner {owner} · full event timeline on the task page",
+    "timelineLayer": "Execution timeline",
+    "timelineToggle": "Events ({count})",
+    "timelineEmpty": "No events yet",
+    "event": {
+      "completePass": "Check passed",
+      "completeFail": "Check failed",
+      "decision": "Branch decision",
+      "rewind": "Rewind",
+      "skip": "Skip",
+      "approval": "Approved",
+      "sessionStart": "Session injected",
+      "node": "node {node}",
+      "by": "by {by}"
+    },
+    "docsLayer": "Task artifacts",
+    "docsLoading": "Loading artifacts…",
+    "docsFailed": "Failed to load artifacts",
     "archive": "Archive",
     "archiveDoneConfirm": "Archive this task? It moves to the archive dir; status stays unchanged.",
     "archiving": "Archiving…"
+  },
+  "taskDocs": {
+    "title": "Task artifacts",
+    "filesLabel": "Files",
+    "loading": "Loading…",
+    "loadFailed": "Failed to load this artifact",
+    "readonly": "Read-only",
+    "close": "Close"
   },
   "archived": {
     "empty": "No archived tasks",

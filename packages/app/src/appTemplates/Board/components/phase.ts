@@ -17,7 +17,14 @@ export const PHASE_META: Record<Phase, { pill: string; dot: string; strip: strin
     border: 'border-mustard',
     ring: 'ring-mustard',
   },
-  finish: { pill: 'text-teal bg-teal-bg', dot: 'bg-teal', strip: 'bg-teal', border: 'border-teal', ring: 'ring-teal' },
+  // 收尾(finish)阶段在 doing 列时与执行(execute)同用 mustard;绿色(teal)仅保留给 done 列(TaskCard isDone 分支)。
+  finish: {
+    pill: 'text-mustard bg-mustard-bg',
+    dot: 'bg-mustard',
+    strip: 'bg-mustard',
+    border: 'border-mustard',
+    ring: 'ring-mustard',
+  },
 };
 
 export const PHASE_ORDER: Phase[] = ['planning', 'execute', 'finish'];

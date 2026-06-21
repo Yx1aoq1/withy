@@ -51,14 +51,16 @@
     "save_saving": "保存中…",
     "save_saved": "已保存",
     "save_error": "保存失败",
-    "toc": "大纲",
-    "untitledHeading": "(无标题)",
     "selectHint": "在左栏选择一篇文档以查看与编辑",
     "loadFailed": "加载该文档失败",
     "modeDoc": "文档",
     "modeGraph": "关系图",
     "graphEmpty": "暂无链接",
     "graphHint": "点击节点打开对应文档"
+  },
+  "doc": {
+    "outline": "大纲",
+    "untitledHeading": "(无标题)"
   },
   "board": {
     "all": "全部",
@@ -87,10 +89,34 @@
     "implementationEmpty": "暂无实施步骤",
     "implementationSteps": "实施步骤 ({count})",
     "implementationUnparsed": "implement.md 中有 {count} 条列表项未识别为复选框",
-    "ownerLine": "负责人 {owner} · 完整事件时间线见任务详情页",
+    "timelineLayer": "执行时间线",
+    "timelineToggle": "事件 ({count})",
+    "timelineEmpty": "暂无事件",
+    "event": {
+      "completePass": "验收通过",
+      "completeFail": "验收未过",
+      "decision": "分支判定",
+      "rewind": "回退",
+      "skip": "跳过",
+      "approval": "已审批",
+      "sessionStart": "会话注入",
+      "node": "节点 {node}",
+      "by": "by {by}"
+    },
+    "docsLayer": "任务产物",
+    "docsLoading": "加载产物…",
+    "docsFailed": "产物加载失败",
     "archive": "归档",
     "archiveDoneConfirm": "归档此任务?将移入归档目录,状态保持不变。",
     "archiving": "归档中…"
+  },
+  "taskDocs": {
+    "title": "任务产物",
+    "filesLabel": "产物",
+    "loading": "加载中…",
+    "loadFailed": "加载该产物失败",
+    "readonly": "只读",
+    "close": "关闭"
   },
   "archived": {
     "empty": "暂无归档任务",

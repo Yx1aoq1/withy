@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { ARCHIVED_STATUS_META, formatArchivedDay } from './archived';
+import { Scroller } from '@/components/Scroller';
 import type { ArchivedCard, ArchivedData } from '@/types/dashboard';
 
 interface ArchivedListProps {
@@ -19,28 +20,30 @@ export function ArchivedList({ data, selectedId, onSelect }: ArchivedListProps) 
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-[18px] pt-2.5 pb-[18px]">
-      {data.groups.map(group => (
-        <section key={group.bucket} className="mb-4">
-          <div className="mb-1.5 flex items-center gap-2">
-            <span className="font-serif text-[13px] font-semibold text-ink-soft">{group.bucket}</span>
-            <span className="rounded-full border border-line bg-paper-sunken px-2 py-px text-[11px] font-bold text-ink-soft">
-              {group.cards.length}
-            </span>
-          </div>
-          <ul className="flex flex-col">
-            {group.cards.map(card => (
-              <ArchivedRow
-                key={card.id}
-                card={card}
-                selected={card.id === selectedId}
-                onSelect={() => onSelect(card.id)}
-              />
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
+    <Scroller className="min-h-0 flex-1">
+      <div className="px-[18px] pt-2.5 pb-[18px]">
+        {data.groups.map(group => (
+          <section key={group.bucket} className="mb-4">
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="font-serif text-[13px] font-semibold text-ink-soft">{group.bucket}</span>
+              <span className="rounded-full border border-line bg-paper-sunken px-2 py-px text-[11px] font-bold text-ink-soft">
+                {group.cards.length}
+              </span>
+            </div>
+            <ul className="flex flex-col">
+              {group.cards.map(card => (
+                <ArchivedRow
+                  key={card.id}
+                  card={card}
+                  selected={card.id === selectedId}
+                  onSelect={() => onSelect(card.id)}
+                />
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </Scroller>
   );
 }
 
