@@ -1,0 +1,19 @@
+{
+  "taskId": "06-21-看板卡片配色-排序-详情时间线与滚动条优化",
+  "currentNode": null,
+  "completedNodes": [
+    "brainstorm",
+    "grill-me",
+    "dev",
+    "check",
+    "finish"
+  ],
+  "decisions": {},
+  "approvals": {
+    "grill-me": {
+      "approvedAt": "2026-06-20T16:31:49.967Z",
+      "by": "yan"
+    }
+  },
+  "updatedAt": "2026-06-20T17:12:41.828Z"
+}
