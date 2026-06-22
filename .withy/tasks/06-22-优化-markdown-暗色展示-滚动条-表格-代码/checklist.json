@@ -1,0 +1,53 @@
+{
+  "nextId": 9,
+  "items": [
+    {
+      "id": "1",
+      "text": "milkdown-tokens.css 补 --crepe-color-inline-area 映射,消除浅灰 #cacaca 内联底",
+      "verify": "grep -q crepe-color-inline-area packages/app/src/components/markdown/milkdown-tokens.css",
+      "done": true
+    },
+    {
+      "id": "2",
+      "text": "内联 code 覆盖:.milkdown .ProseMirror code 显式 paper-sunken 底 + line 细边 + terracotta 字",
+      "verify": "grep -q \"ProseMirror code\" packages/app/src/components/markdown/milkdown-tokens.css",
+      "done": true
+    },
+    {
+      "id": "3",
+      "text": "fenced 代码块覆盖:.milkdown-code-block 加 line-strong 边框,cm-editor 底色与正文拉开",
+      "verify": "grep -q \"milkdown-code-block\" packages/app/src/components/markdown/milkdown-tokens.css",
+      "done": true
+    },
+    {
+      "id": "4",
+      "text": "表格覆盖:th/td 边框改 line-strong 实色,th 表头加 paper-sunken 浅底",
+      "verify": "grep -q \"milkdown-table-block\" packages/app/src/components/markdown/milkdown-tokens.css",
+      "done": true
+    },
+    {
+      "id": "5",
+      "text": "globals.css .doc-scroll thumb 重写为 10px 圆角+2px 内缩,亮/暗按主题给黑/白半透明",
+      "verify": "grep -q \"background-clip\" packages/app/src/app/globals.css",
+      "done": true
+    },
+    {
+      "id": "6",
+      "text": "agent-browser 在亮/暗两主题截图核对 4 个验收点 + DocOutline 联动",
+      "verify": "两主题截图逐条比对表格线/内联code/代码块/滚动条,大纲跳转高亮正常",
+      "done": true
+    },
+    {
+      "id": "7",
+      "text": "静态校验与格式化",
+      "verify": "pnpm --filter @withy/app typecheck && pnpm --filter @withy/app lint && prettier --check packages/app/src/components/markdown/milkdown-tokens.css packages/app/src/app/globals.css",
+      "done": true
+    },
+    {
+      "id": "8",
+      "text": "MarkdownEditor.tsx:93 滚动容器补 doc-scroll 类,统一知识库编辑器滚动条",
+      "verify": "grep -q 'doc-scroll min-h-0 flex-1 overflow-auto' packages/app/src/appTemplates/Knowledge/components/MarkdownEditor.tsx",
+      "done": true
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "taskId": "06-22-优化-markdown-暗色展示-滚动条-表格-代码",
+  "currentNode": null,
+  "completedNodes": [
+    "brainstorm",
+    "grill-me",
+    "dev",
+    "check",
+    "finish"
+  ],
+  "decisions": {},
+  "approvals": {
+    "grill-me": {
+      "approvedAt": "2026-06-22T05:59:13.490Z",
+      "by": "yan"
+    }
+  },
+  "updatedAt": "2026-06-22T06:25:15.121Z"
+}
