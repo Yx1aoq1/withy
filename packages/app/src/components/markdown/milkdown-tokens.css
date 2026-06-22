@@ -17,6 +17,7 @@
   --crepe-color-hover: var(--paper-sunken);
   --crepe-color-selected: var(--teal-bg);
   --crepe-color-inline-code: var(--terracotta);
+  --crepe-color-inline-area: var(--paper-sunken);
   --crepe-font-title: var(--font-serif);
   --crepe-font-default: var(--font-sans);
   --crepe-font-code: var(--font-mono);
@@ -35,4 +36,57 @@
   padding: 0 3px;
   font-size: 0.95em;
   white-space: nowrap;
+}
+
+/*
+ * 暗色可读性修复:Crepe frame 主题对表格/内联码/代码块的默认取值在砚墨墨底下偏浅、边界糊。
+ * 以下覆盖把它们对齐 visual-design token —— 表格用 border-line 实线、内联码沉底纸赤陶字、
+ * fenced 代码块单层沉底 + 边框。只覆盖静态展示,不动编辑器选中态/工具栏。
+ */
+
+/* 内联代码:沉底纸 + 细边 + 赤陶字(替换 frame 默认浅灰 inline-area);:not(pre) 排除任何裸 pre code */
+.milkdown .ProseMirror :not(pre) > code {
+  background: var(--paper-sunken);
+  border: 1px solid var(--line);
+}
+
+/* fenced 代码块:整块单一沉底(--bg,比正文 paper 更沉)+ line-strong 边框,内层透明继承 —— 暗色下有清晰边界 */
+.milkdown .milkdown-code-block {
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+}
+
+.milkdown .milkdown-code-block .cm-editor,
+.milkdown .milkdown-code-block .cm-gutters {
+  background: transparent;
+}
+
+/*
+ * Crepe 给 CodeMirror 内置 One Dark 主题:文字写死浅灰 #abb2bf、当前行 gutter 暗块 #2c313a、
+ * activeLine 淡蓝带 —— 都不随砚墨主题,亮色下浅字看不清、首行是突兀暗块。统一回砚墨 token,
+ * 并消掉只读展示无意义的 activeLine 高亮(语法高亮 token 的 span 各自带色,不受影响)。
+ */
+.milkdown .milkdown-code-block .cm-content,
+.milkdown .milkdown-code-block .cm-line {
+  color: var(--ink);
+}
+
+.milkdown .milkdown-code-block .cm-gutters,
+.milkdown .milkdown-code-block .cm-lineNumbers .cm-gutterElement {
+  color: var(--ink-faint);
+}
+
+.milkdown .milkdown-code-block .cm-activeLine,
+.milkdown .milkdown-code-block .cm-activeLineGutter {
+  background: transparent;
+}
+
+/* 表格:实线分隔(压过 Crepe 的 20% 透明 outline,取 --line 对齐 visual-design §6.6);表头沉底区分 */
+.milkdown .milkdown-table-block :is(th, td) {
+  border: 1px solid var(--line);
+}
+
+.milkdown .milkdown-table-block th {
+  background: var(--paper-sunken);
 }

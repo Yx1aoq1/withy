@@ -115,7 +115,7 @@ export function DocOutline({ docKey }: DocOutlineProps) {
       <div className="shrink-0 px-4 py-3 text-[11px] font-semibold tracking-wide text-ink-faint uppercase">
         {t('outline')}
       </div>
-      <nav className="min-h-0 flex-1 overflow-auto px-2 pb-3">
+      <nav className="doc-scroll min-h-0 flex-1 overflow-auto px-2 pb-3">
         {headings.map(heading => (
           <button
             key={heading.id}

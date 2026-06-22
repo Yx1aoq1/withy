@@ -90,7 +90,7 @@ function CrepeEditor({ file, project }: MarkdownEditorProps) {
         {!file.readonly && <SaveBadge status={status} t={t} />}
         {file.readonly && <span className="text-ink-faint">{t('readonly')}</span>}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto" data-doc-scroll>
+      <div className="doc-scroll min-h-0 flex-1 overflow-auto" data-doc-scroll>
         <Milkdown />
       </div>
     </div>

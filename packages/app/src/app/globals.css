@@ -14,7 +14,9 @@
     'Microsoft YaHei', sans-serif;
   --font-serif: var(--font-fraunces), Fraunces, 'Songti SC', 'Noto Serif SC', Georgia, serif;
   --font-mono: var(--font-jetbrains), 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius-sm2: 8px;
   --radius-card: 12px;
+  --radius-lg2: 14px;
 }
 
 /* 语义色 token → 引用随主题切换的 CSS 变量(inline 让工具类直接指向变量) */
@@ -148,34 +150,61 @@ body {
 }
 
 /*
- * 细滚动条工具类:用于 markdown 正文等保持原生滚动、不被 OverlayScrollbars 接管的区域。
- * 细、track 透明、thumb 半透明,默认近隐形,hover/聚焦才显现。
+ * 细滚动条工具类:markdown 正文等保持原生滚动、不被 OverlayScrollbars 接管的区域
+ * (见知识库 scroll-readonly-markdown —— 套 OverlayScrollbars 会破坏 DocOutline 的 observer)。
+ * 视觉对齐 Scroller(OverlayScrollbars os-theme-*):10px 圆角条、2px 内缩、默认近隐形,
+ * hover/聚焦才显现;亮主题深色条、暗主题浅色条,与容器区滚动条观感一致。
+ * thumb 的半透明黑/白为对齐 OverlayScrollbars 自带 os-theme 取值,属 token 之外的刻意例外。
  */
 .doc-scroll {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 }
 
+/* Firefox:亮主题深色条 / 暗主题浅色条,track 透明 */
 .doc-scroll:hover,
 .doc-scroll:focus-within {
-  scrollbar-color: color-mix(in srgb, var(--ink-faint) 55%, transparent) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.44) transparent;
+}
+
+[data-theme='dark'] .doc-scroll:hover,
+[data-theme='dark'] .doc-scroll:focus-within {
+  scrollbar-color: rgba(255, 255, 255, 0.44) transparent;
 }
 
 .doc-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 .doc-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
+/* 2px 内缩 = 透明 border + padding-box 裁切;默认透明近隐形 */
 .doc-scroll::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 999px;
+  background-color: transparent;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 10px;
 }
 
 .doc-scroll:hover::-webkit-scrollbar-thumb,
 .doc-scroll:focus-within::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--ink-faint) 45%, transparent);
+  background-color: rgba(0, 0, 0, 0.44);
+}
+
+.doc-scroll:hover::-webkit-scrollbar-thumb:hover,
+.doc-scroll:focus-within::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.55);
+}
+
+[data-theme='dark'] .doc-scroll:hover::-webkit-scrollbar-thumb,
+[data-theme='dark'] .doc-scroll:focus-within::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.44);
+}
+
+[data-theme='dark'] .doc-scroll:hover::-webkit-scrollbar-thumb:hover,
+[data-theme='dark'] .doc-scroll:focus-within::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.55);
 }
