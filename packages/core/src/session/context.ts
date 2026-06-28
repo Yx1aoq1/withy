@@ -1,11 +1,10 @@
-import { readKnowledgeEntry } from '../knowledge/index.js';
-import { readContextConfig } from '../store/index.js';
+import { readKnowledgeEntry, listKnowledgePages } from '../knowledge/index.js';
 import type { InjectMode } from '../knowledge/index.js';
 import type { Scope } from '../paths.js';
 
 // 一条已解析的计划注入项(resolvePlannedContext 输出);形态决定 session-start 注正文还是注索引
 export interface PlannedEntry {
-  // 知识条目 id(context.json 引用的稳定标识)
+  // 知识条目 id(injectByDefault 聚合按此引用)
   id: string;
 
   // 注入形态:full=注正文,index=注 title+summary+路径
@@ -42,37 +41,24 @@ function toPlannedEntry(scope: Scope, id: string): PlannedEntry {
 }
 
 /**
- * 计算某节点的计划注入清单(harness §4 / knowledge.md §7)。
- * 合并项目 `default` 与该节点覆盖,去掉 `disabled`,按 id 去重,逐条解析成带注入形态的条目。
- * 全局 injectByDefault 层为后续增强(knowledge.md)。
+ * 计算 session-start 的全局常驻注入清单(harness §4 / knowledge.md §7)。
+ * 扫该 scope 全部知识页,取 `injectByDefault: true` 的,按 id 去重后逐条解析成带注入形态的条目。
+ * 取代原 context.json 的 default/node 注入:节点级「必读」改由派遣场景的 dispatch.json 承担(design §1.3)。
  *
  * @param scope 目标 scope
- * @param _taskId 任务 id(当前未参与计算,保留以备 task 关键产物接入)
- * @param nodeId 当前节点 id;空串表示无活跃节点,只取 default
- * @return 去重后的计划注入项,顺序为 default.required→default.optional→node.required→node.optional
+ * @return 去重后的计划注入项(按知识页扫描顺序)
  *
  * @example
- * resolvePlannedContext(scope, taskId, 'dev');
+ * resolvePlannedContext(scope);
  */
-export function resolvePlannedContext(scope: Scope, _taskId: string, nodeId: string): PlannedEntry[] {
-  const config = readContextConfig(scope);
-  const nodeSet = config.nodes[nodeId];
-
-  const disabled = new Set([...config.default.disabled, ...(nodeSet?.disabled ?? [])]);
-  const ids = [
-    ...config.default.required,
-    ...config.default.optional,
-    ...(nodeSet?.required ?? []),
-    ...(nodeSet?.optional ?? []),
-  ];
-
+export function resolvePlannedContext(scope: Scope): PlannedEntry[] {
   const seen = new Set<string>();
   const entries: PlannedEntry[] = [];
 
-  for (const id of ids) {
-    if (disabled.has(id) || seen.has(id)) continue;
-    seen.add(id);
-    entries.push(toPlannedEntry(scope, id));
+  for (const page of listKnowledgePages(scope)) {
+    if (!page.injectByDefault || seen.has(page.id)) continue;
+    seen.add(page.id);
+    entries.push(toPlannedEntry(scope, page.id));
   }
 
   return entries;

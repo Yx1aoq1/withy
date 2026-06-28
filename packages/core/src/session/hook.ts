@@ -32,7 +32,6 @@ export function renderSessionStart(scope: Scope): SessionStartResult {
 
   const current = resolveCurrentTask(scope);
   let taskId: string | null = null;
-  let currentNode = '';
 
   if (current === null) {
     out.push('- NO ACTIVE TASK · Next-Action: describe your goal and I will run `withy task start "<title>" --json`');
@@ -48,7 +47,6 @@ export function renderSessionStart(scope: Scope): SessionStartResult {
     const wf = readWorkflow(scope, task.workflow);
     const state = readState(scope, taskId);
     const node = state.currentNode ? nodeById(wf, state.currentNode) : null;
-    currentNode = state.currentNode ?? '';
 
     out.push(`- Task ${taskId}: ${task.title}`);
     out.push(`- Status ${task.status} · Node ${state.currentNode ?? '(done)'} · Phase ${node?.phase ?? '-'}`);
@@ -70,7 +68,7 @@ export function renderSessionStart(scope: Scope): SessionStartResult {
     }
   }
 
-  const planned = resolvePlannedContext(scope, taskId ?? '', currentNode);
+  const planned = resolvePlannedContext(scope);
   out.push(...contextLines(planned));
 
   const text = out.join('\n') + '\n';

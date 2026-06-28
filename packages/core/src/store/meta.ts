@@ -1,8 +1,8 @@
 import { readdirSync, existsSync } from 'node:fs';
 import { dirname, resolve, basename } from 'node:path';
 import { type Scope, taskDir, archiveDir, guidePath } from '../paths.js';
-import { type ContextConfig, type Developer, ContextConfigSchema, DeveloperSchema } from '../types.js';
-import { readTextFileIfExists, existsNonEmpty } from '../utils/index.js';
+import { type Developer, DeveloperSchema } from '../types.js';
+import { readTextFileIfExists, existsNonEmpty, writeTextFile } from '../utils/index.js';
 import { readValidated } from './errors.js';
 import { taskReadPath } from './tasks.js';
 
@@ -64,18 +64,15 @@ function isInsideTaskDir(scope: Scope, id: string, file: string): boolean {
   return dirname(dirname(parent)) === archiveDir(scope); // archive/<bucket>/<id>
 }
 
-// ── Context config (.withy/context.json — default injection plan) ────────────
-
-export function readContextConfig(scope: Scope): ContextConfig {
-  const file = resolve(scope.withyDir, 'context.json');
-  if (!existsSync(file)) return ContextConfigSchema.parse({});
-  return readValidated(file, ContextConfigSchema, 'context.json');
-}
-
 // ── Session guide (.withy/guide.md — tool-level intro, injected verbatim) ───
 
 export function readGuide(scope: Scope): string | null {
   return readTextFileIfExists(guidePath(scope));
+}
+
+/** Overwrite the session guide (.withy/guide.md). Backs the web context editor — design §6.2. */
+export function writeGuide(scope: Scope, body: string): void {
+  writeTextFile(guidePath(scope), body);
 }
 
 // ── Developer identity (.withy/.developer — local, gitignored) ───────────────

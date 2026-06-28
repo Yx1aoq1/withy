@@ -1,24 +1,23 @@
 import fg from 'fast-glob';
 import { type Scope } from '../paths.js';
-import { readContextConfig } from '../store/index.js';
 import { listKnowledgePages } from './pages.js';
 
-// 一条 lint 发现:断链/悬空引用/悬空 covers 为 error,孤儿页为 warning
+// 一条 lint 发现:断链/悬空 covers 为 error,孤儿页为 warning
 export interface KnowledgeIssue {
   level: 'error' | 'warning';
-  kind: 'orphan' | 'broken-link' | 'dangling-ref' | 'dangling-cover';
+  kind: 'orphan' | 'broken-link' | 'dangling-cover';
 
   // 涉及的页 id(orphan/broken-link/dangling-cover 的源页)
   id?: string;
 
-  // 指向的目标(broken-link 的缺失页 / dangling-ref 的缺失 id / dangling-cover 的零命中 glob)
+  // 指向的目标(broken-link 的缺失页 / dangling-cover 的零命中 glob)
   target?: string;
   message: string;
 }
 
 /**
  * 机械体检某 scope 知识库:孤儿页(入链 0)、断链(指向不存在的页)、
- * context.json 注入引用悬空(指向不存在的 id)、悬空 covers(glob 在仓库零命中)。
+ * 悬空 covers(glob 在仓库零命中)。
  *
  * @param scope 目标 scope
  * @return 全部发现(空 = 健康);断链/悬空为 error,孤儿为 warning
@@ -73,22 +72,6 @@ export function lintKnowledge(scope: Scope): KnowledgeIssue[] {
           });
         }
       }
-    }
-  }
-
-  const config = readContextConfig(scope);
-  const refs = new Set<string>();
-  for (const set of [config.default, ...Object.values(config.nodes)]) {
-    for (const id of [...set.required, ...set.optional]) refs.add(id);
-  }
-  for (const id of refs) {
-    if (!ids.has(id)) {
-      issues.push({
-        level: 'error',
-        kind: 'dangling-ref',
-        target: id,
-        message: `context.json injects unknown knowledge id "${id}"`,
-      });
     }
   }
 
