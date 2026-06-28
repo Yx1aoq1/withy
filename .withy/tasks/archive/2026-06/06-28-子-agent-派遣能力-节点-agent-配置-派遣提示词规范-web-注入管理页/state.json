@@ -1,0 +1,19 @@
+{
+  "taskId": "06-28-子-agent-派遣能力-节点-agent-配置-派遣提示词规范-web-注入管理页",
+  "currentNode": null,
+  "completedNodes": [
+    "brainstorm",
+    "grill-me",
+    "dev",
+    "check",
+    "finish"
+  ],
+  "decisions": {},
+  "approvals": {
+    "grill-me": {
+      "approvedAt": "2026-06-28T07:12:30.461Z",
+      "by": "yan"
+    }
+  },
+  "updatedAt": "2026-06-28T10:28:18.941Z"
+}

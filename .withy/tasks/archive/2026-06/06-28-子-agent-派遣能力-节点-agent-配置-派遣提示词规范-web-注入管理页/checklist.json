@@ -1,0 +1,71 @@
+{
+  "nextId": 12,
+  "items": [
+    {
+      "id": "1",
+      "text": "节点 schema 增可选 agent 字段(仅 type:skill)+ zod 校验 + validate ctx 预留 agentExists 接入点",
+      "verify": "pnpm --filter @withy/core test 覆盖 skill 节点 agent 字段解析、switch 节点无 agent;pnpm typecheck 通过",
+      "done": true
+    },
+    {
+      "id": "2",
+      "text": "canonical .agents/agents/<role>.md(单md)+ registry claude/codex 各加 agentDef{target,format}(格式驱动可扩展)+ discoverAgents/resolveAgentRef/agentExists",
+      "verify": "单测 discoverAgents 扫 canonical .agents/agents/*.md + claude/codex agentDef.target 去重;validate 经 agentExists 对悬空 agent 出 warning 不拦",
+      "done": true
+    },
+    {
+      "id": "3",
+      "text": "扁平 dispatch.json schema({read:[{id|artifact,description}],_help})+ core 种壳(workflow 有 agent 节点时,读 workflow 文件)+ 幂等懒补;子 agent 直接 Read,无 --role",
+      "verify": "单测:新任务 dispatch.json 含 _help;有 agent 节点才种壳、无 agent 不种;web 给节点加 agent 后懒补壳;task status 不含 --role",
+      "done": true
+    },
+    {
+      "id": "4",
+      "text": "移除 context.json(schema/readContextConfig/lint)+ resolvePlannedContext 重构(留 guide、新建 injectByDefault 聚合、删 default/node)+ init 不再写;测试调整",
+      "verify": "grep 无 context.json/readContextConfig 残留;单测 injectByDefault 聚合进 session-start 快照;init 产物不含 context.json、managed-templates 测试通过",
+      "done": true
+    },
+    {
+      "id": "5",
+      "text": "core agent 投递 deploy(format handler 注册表:markdown→文件级软链 Claude、toml→md转换生成 Codex、幂等)+ configurator 改调 core + templates/common/agents/{implement,review,research}.md",
+      "verify": "跑投递后 .claude/agents/<role>.md 软链指向 canonical、.codex/agents/<role>.toml 含 name/description/developer_instructions;三角色模板单文件存在;重复跑幂等;新增 format handler 不改主流程(结构可扩展)",
+      "done": true
+    },
+    {
+      "id": "6",
+      "text": "角色定义正文写行为+回传契约(blocked 不推进)+prelude(Read dispatch.json+design.md);skill 正文不提 agent/dispatch",
+      "verify": "grep 三角色定义含 Read dispatch.json/design.md、回传 {status,summary,touched,blockers}、blocked 不 next、自豁免;grep dev/check skill 正文不含 agent/dispatch 字样",
+      "done": true
+    },
+    {
+      "id": "7",
+      "text": "relay dispatch 块:describeNext 调用侧在配 agent 节点补 {role,activeTask,curated,action};curated 读 dispatch.json 现算;(可选)curation 门禁 checker 查 dispatch.json.read 非空",
+      "verify": "单测:配 agent 节点 next/status 含 dispatch 块、curated 反映 read 空否、无 seedTemplate/hint/manifest;无 agent 节点不含 dispatch;门禁 checker 对只有 _help 判未 curate",
+      "done": true
+    },
+    {
+      "id": "8",
+      "text": "web 注入管理页:内层 context(编辑 guide.md,新增 core writeGuide + 新 /api/guide,复用编辑器组件不复用 knowledge save)+ agents(角色 CRUD + 保存触发 core 投递);相关 API",
+      "verify": "agent-browser:context 编辑 guide.md 经 /api/guide 落盘;agents 增删改落 .agents/agents/ 并触发 core 投递到 Claude/Codex;guide/agents API 返 2xx",
+      "done": true
+    },
+    {
+      "id": "9",
+      "text": "web 画布:skill 节点 agent 选择器(可选)+ workflow PUT 校验补 agentExists(悬空 warning 不拦)",
+      "verify": "agent-browser:skill 节点面板选 agent 保存后节点 json 写入 agent 字段;选悬空角色保存返 warning 不拦(PUT 校验含 agentExists)",
+      "done": true
+    },
+    {
+      "id": "10",
+      "text": "同步设计文档 harness/core/web/knowledge-base/cli/status",
+      "verify": "对照 design.md §7 表逐页核对六篇 wiki 已更新;wiki 内 [[链接]] 无悬空",
+      "done": true
+    },
+    {
+      "id": "11",
+      "text": "验收:typecheck/lint(0 warn)/build + 相关测试 + agent-browser 真实流程",
+      "verify": "pnpm typecheck && pnpm lint(0 warning)&& pnpm -r build 全过;agent-browser 走通派遣+web 真实流程",
+      "done": true
+    }
+  ]
+}
