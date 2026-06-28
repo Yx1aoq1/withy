@@ -16,13 +16,15 @@ type SaveStatus = 'idle' | 'editing' | 'saving' | 'saved' | 'error';
 interface MarkdownEditorProps {
   file: KnowledgeFileView;
   project: string;
+  // 可选保存覆盖:提供则用它替代默认 /api/knowledge/save(注入管理页复用编辑器、写别处)— design §6.2。
+  onSave?: (markdown: string) => Promise<boolean>;
 }
 
 const AUTOSAVE_MS = 1000;
 
 // Crepe 封装:按 relPath keyed(父层)+ 非受控(defaultValue 仅初始);markdownUpdated 与载入基线 diff,
 // 确有变更才防抖 1s 调 save API。只读页(index.md)只读渲染、不进保存。
-function CrepeEditor({ file, project }: MarkdownEditorProps) {
+function CrepeEditor({ file, project, onSave }: MarkdownEditorProps) {
   const t = useTranslations('knowledge');
   const crepeRef = useRef<Crepe | null>(null);
   const baselineRef = useRef<string | null>(null); // 编辑器对载入正文的首次序列化(避免初始重排空写)
@@ -32,6 +34,21 @@ function CrepeEditor({ file, project }: MarkdownEditorProps) {
   const save = useCallback(
     (markdown: string) => {
       setStatus('saving');
+
+      const done = (ok: boolean): void => {
+        if (ok) {
+          baselineRef.current = markdown; // 已落盘 → 新基线
+          setStatus('saved');
+        } else {
+          setStatus('error');
+        }
+      };
+
+      if (onSave) {
+        onSave(markdown).then(done).catch(() => setStatus('error'));
+        return;
+      }
+
       fetch(`/api/knowledge/save?project=${encodeURIComponent(project)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -39,17 +56,12 @@ function CrepeEditor({ file, project }: MarkdownEditorProps) {
       })
         .then(res => res.json())
         .then(data => {
-          if (data?.ok) {
-            baselineRef.current = markdown; // 已落盘 → 新基线
-            markLocalWrite(); // echo 抑制打戳
-            setStatus('saved');
-          } else {
-            setStatus('error');
-          }
+          if (data?.ok) markLocalWrite(); // echo 抑制打戳
+          done(Boolean(data?.ok));
         })
         .catch(() => setStatus('error'));
     },
-    [project, file.relPath],
+    [project, file.relPath, onSave],
   );
 
   const { loading } = useEditor(root => {
