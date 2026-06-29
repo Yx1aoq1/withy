@@ -84,11 +84,7 @@ function SkillFields({
       </Field>
 
       <Field label={t('agent')}>
-        <select
-          value={node.agent ?? ''}
-          onChange={event => setAgent(event.target.value)}
-          className={inputClass}
-        >
+        <select value={node.agent ?? ''} onChange={event => setAgent(event.target.value)} className={inputClass}>
           <option value="">{t('agentNone')}</option>
           {agentOptions.map(role => (
             <option key={role} value={role}>

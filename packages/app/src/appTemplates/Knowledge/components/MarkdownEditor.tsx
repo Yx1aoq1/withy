@@ -45,7 +45,9 @@ function CrepeEditor({ file, project, onSave }: MarkdownEditorProps) {
       };
 
       if (onSave) {
-        onSave(markdown).then(done).catch(() => setStatus('error'));
+        onSave(markdown)
+          .then(done)
+          .catch(() => setStatus('error'));
         return;
       }
 

@@ -5,7 +5,13 @@ import type { Workflow } from '../../src/types.js';
 
 describe('node agent field (schema)', () => {
   it('parses an optional agent on a skill node', () => {
-    const node = SkillNodeSchema.parse({ id: 'check', type: 'skill', skill: 'withy-check', agent: 'review', next: null });
+    const node = SkillNodeSchema.parse({
+      id: 'check',
+      type: 'skill',
+      skill: 'withy-check',
+      agent: 'review',
+      next: null,
+    });
     expect(node.agent).toBe('review');
   });
 

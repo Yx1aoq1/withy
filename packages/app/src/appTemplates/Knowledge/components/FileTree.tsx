@@ -91,10 +91,18 @@ export function FileTree({ tree, selected, project, onSelect, onDeleted }: FileT
       <div className="flex shrink-0 items-center justify-between px-3 py-3">
         <span className="text-[11px] font-semibold tracking-wide text-ink-faint uppercase">{t('files')}</span>
         <div className="flex gap-1">
-          <button type="button" onClick={() => openDialog({ kind: 'new-page', dirRelPath: 'wiki' })} className={iconBtn}>
+          <button
+            type="button"
+            onClick={() => openDialog({ kind: 'new-page', dirRelPath: 'wiki' })}
+            className={iconBtn}
+          >
             {t('newPageShort')}
           </button>
-          <button type="button" onClick={() => openDialog({ kind: 'new-folder', dirRelPath: 'wiki' })} className={iconBtn}>
+          <button
+            type="button"
+            onClick={() => openDialog({ kind: 'new-folder', dirRelPath: 'wiki' })}
+            className={iconBtn}
+          >
             {t('newFolderShort')}
           </button>
         </div>

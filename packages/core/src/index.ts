@@ -137,7 +137,13 @@ export {
   writeGuide,
   readGuide,
 } from './store/index.js';
-export type { PendingInjection, ListTasksOptions, KnowledgeTreeEntry, KnowledgeFile, WikiEntry } from './store/index.js';
+export type {
+  PendingInjection,
+  ListTasksOptions,
+  KnowledgeTreeEntry,
+  KnowledgeFile,
+  WikiEntry,
+} from './store/index.js';
 
 export {
   countConsecutiveFailures,

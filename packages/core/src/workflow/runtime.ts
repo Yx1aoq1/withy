@@ -88,7 +88,8 @@ export function nextNode(scope: Scope, taskId: string, opts: NextOptions = {}): 
   const wf = readWorkflow(scope, task.workflow);
   const state = readState(scope, taskId);
 
-  if (state.currentNode === null) return { ok: true, exitCode: 0, node: null, next: relayNext(scope, taskId, wf, state) };
+  if (state.currentNode === null)
+    return { ok: true, exitCode: 0, node: null, next: relayNext(scope, taskId, wf, state) };
 
   const node = nodeById(wf, state.currentNode);
   const action: WorkflowAction = opts.branch
@@ -105,7 +106,8 @@ export function skipNode(scope: Scope, taskId: string, by: string | undefined, r
   const wf = readWorkflow(scope, task.workflow);
   const state = readState(scope, taskId);
 
-  if (state.currentNode === null) return { ok: true, exitCode: 0, node: null, next: relayNext(scope, taskId, wf, state) };
+  if (state.currentNode === null)
+    return { ok: true, exitCode: 0, node: null, next: relayNext(scope, taskId, wf, state) };
 
   return persist(scope, taskId, task, wf, stepWorkflow(wf, state, { kind: 'skip', by, reason }));
 }

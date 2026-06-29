@@ -3,7 +3,12 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { knowledgeDir, type Scope } from '../../src/paths.js';
-import { listKnowledgeEntries, readKnowledgeEntryFile, writeKnowledgeFile, makeKnowledgeDir } from '../../src/store/index.js';
+import {
+  listKnowledgeEntries,
+  readKnowledgeEntryFile,
+  writeKnowledgeFile,
+  makeKnowledgeDir,
+} from '../../src/store/index.js';
 import {
   readKnowledgePageContent,
   createKnowledgeFolder,
@@ -262,7 +267,9 @@ describe('listKnowledgeEntries', () => {
     writeKnowledgeFile(scope, 'graph.json', '{}');
 
     const rels = listKnowledgeEntries(scope).map(e => e.relPath);
-    expect(rels).toEqual(expect.arrayContaining(['wiki', 'wiki/a.md', 'sources', 'sources/rfc.md', 'index.md', 'log.md']));
+    expect(rels).toEqual(
+      expect.arrayContaining(['wiki', 'wiki/a.md', 'sources', 'sources/rfc.md', 'index.md', 'log.md']),
+    );
     expect(rels).not.toContain('graph.json');
   });
 });

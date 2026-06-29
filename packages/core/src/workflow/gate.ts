@@ -48,7 +48,7 @@ const progressChecker: GateChecker = (gate, ctx) =>
 
 const curatedChecker: GateChecker = (gate, ctx) =>
   gate.curated && !ctx.hasCuratedDispatch()
-    ? ['curate the dispatch reading list: fill dispatch.json\'s `read` (knowledge ids / artifacts)']
+    ? ["curate the dispatch reading list: fill dispatch.json's `read` (knowledge ids / artifacts)"]
     : [];
 
 const CHECKERS: GateChecker[] = [

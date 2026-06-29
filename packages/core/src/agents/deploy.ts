@@ -142,8 +142,8 @@ export function removeAgentDelivery(scope: Scope, role: string): string[] {
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function platformsWithAgentDef(): (RegisteredAgentPlatformConfig & { agentDef: AgentDef })[] {
-  return Object.values(AGENT_PLATFORMS).filter(
-    (p): p is RegisteredAgentPlatformConfig & { agentDef: AgentDef } => Boolean(p.agentDef),
+  return Object.values(AGENT_PLATFORMS).filter((p): p is RegisteredAgentPlatformConfig & { agentDef: AgentDef } =>
+    Boolean(p.agentDef),
   );
 }
 
